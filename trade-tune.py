@@ -2,7 +2,7 @@ from ray import tune
 from ray.tune.registry import register_env
 from ray import shutdown
 from ray.rllib.policy.policy import PolicySpec
-from tradeenvray import Trade, TradeCallback
+from tradeenv import Trade, TradeCallback
 
 
 if __name__ == "__main__":

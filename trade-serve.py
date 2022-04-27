@@ -1,6 +1,6 @@
 from ray.tune.registry import register_env
 import ray.rllib.agents.ppo as ppo
-from tradeenvray import Trade
+from tradeenv import Trade
 from pdb import set_trace as T
 
 
