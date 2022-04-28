@@ -52,7 +52,7 @@ class Trade(MultiAgentEnv):
             self.agent_food_counts[agent] = []
             for j in range(self.food_types):
                 if i == j:
-                    self.agent_food_counts[agent].append(5)
+                    self.agent_food_counts[agent].append(10)
                 else:
                     self.agent_food_counts[agent].append(1)
         return {agent: self.compute_observation(agent) for agent in self.agents}

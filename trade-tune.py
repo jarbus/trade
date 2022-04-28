@@ -12,10 +12,12 @@ if __name__ == "__main__":
 
     register_env(env_name, lambda config: Trade(config))
 
-    test_env = Trade({})
+    num_agents = 3
+    env_config = {"food_types": num_agents, "num_agents": num_agents, "episode_length": 100}
+
+    test_env = Trade(env_config)
     obs_space = test_env.observation_space
     act_space = test_env.action_space
-    num_agents = 2
 
     def gen_policy(i):
         config = {
@@ -44,11 +46,7 @@ if __name__ == "__main__":
         config={
             # Environment specific
             "env": env_name,
-            "env_config": {
-                "food_types": 2,
-                "num_agents": num_agents,
-                "episode_length": 100,
-            },
+            "env_config": env_config,
             "callbacks": TradeCallback,
             # General
             "log_level": "ERROR",
