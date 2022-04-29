@@ -1,12 +1,39 @@
 from ray import tune
 from ray.tune.registry import register_env
-from ray import shutdown
 from ray.rllib.policy.policy import PolicySpec
 from tradeenv import Trade, TradeCallback
+from ray.tune.schedulers import PopulationBasedTraining
+import random
+
+# Postprocess the perturbed config to ensure it's still valid
+def explore(config):
+    # ensure we collect enough timesteps to do sgd
+    if config["train_batch_size"] < config["sgd_minibatch_size"] * 2:
+        config["train_batch_size"] = config["sgd_minibatch_size"] * 2
+    # ensure we run at least one sgd iter
+    if config["num_sgd_iter"] < 1:
+        config["num_sgd_iter"] = 1
+    return config
+
+
+pbt = PopulationBasedTraining(
+    time_attr="time_total_s",
+    perturbation_interval=120,
+    resample_probability=0.25,
+    # Specifies the mutations of these hyperparams
+    hyperparam_mutations={
+        "lambda": lambda: random.uniform(0.9, 1.0),
+        "clip_param": lambda: random.uniform(0.01, 0.5),
+        "lr": [1e-3, 5e-4, 1e-4, 5e-5, 1e-5],
+        "num_sgd_iter": lambda: random.randint(1, 30),
+        "sgd_minibatch_size": lambda: random.randint(128, 1000),
+        "train_batch_size": lambda: random.randint(2000, 160000),
+    },
+    custom_explore_fn=explore,
+)
 
 
 if __name__ == "__main__":
-    shutdown()
 
     env_name = "trade_v1"
 
@@ -40,7 +67,11 @@ if __name__ == "__main__":
     tune.run(
         "PPO",
         name="PPO",
-        stop={"timesteps_total": 5000000},
+        scheduler=pbt,
+        metric="episode_reward_mean",
+        mode="max",
+        num_samples=1,
+        stop={"timesteps_total": 1_500_000},
         checkpoint_freq=10,
         local_dir="~/ray_results/"+env_name,
         config={
@@ -62,14 +93,15 @@ if __name__ == "__main__":
             "gamma": .99,
             # "kl_coeff": 0.001,
             # "kl_target": 1000.,
-            "clip_param": 0.4,
+            "clip_param": tune.choice([0.1, 0.2, 0.3, 0.4]),
             'grad_clip': None,
-            "entropy_coeff": 0.1,
+            "entropy_coeff": 0.2,
             'vf_loss_coeff': 0.25,
-            "sgd_minibatch_size": 64,
-            "num_sgd_iter": 10,  # epoc
+            # These params start off randomly drawn from a set.
+            "num_sgd_iter": tune.choice([10, 20, 30]),
+            "sgd_minibatch_size": tune.choice([100, 500, 1000]),
+            "train_batch_size": tune.choice([1000, 2000, 4000]),
             'rollout_fragment_length': 128,
-            "train_batch_size": 512,
             'lr': 2e-05,
             "clip_actions": True,
             # Method specific
