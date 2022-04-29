@@ -150,7 +150,9 @@ class TradeCallback(DefaultCallbacks):
 
 
 if __name__ == "__main__":
-    tenv = Trade({})
+    num_agents = 3
+    env_config = {"food_types": num_agents, "num_agents": num_agents, "episode_length": 100}
+    tenv = Trade(env_config)
     obs = tenv.reset()
     for i in range(100):
         actions = {}
