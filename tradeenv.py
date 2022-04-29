@@ -64,7 +64,7 @@ class Trade(MultiAgentEnv):
             print(f"{agent}: {self.agent_food_counts[agent]} {self.compute_done(agent)}")
         print(f"table: {self.table}")
         print(f"Total exchanged so far: {self.num_exchanges}")
-        for agent, comm in self.communications:
+        for agent, comm in self.communications.items():
             if max(comm) >= 1:
                 print(f"{agent} said {comm.index(1)}")
 
