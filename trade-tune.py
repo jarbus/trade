@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     register_env(env_name, lambda config: Trade(config))
 
-    num_agents = 3
+    num_agents = 2
     env_config = {"food_types": num_agents, "num_agents": num_agents, "episode_length": 100}
 
     test_env = Trade(env_config)
@@ -48,20 +48,18 @@ if __name__ == "__main__":
 
     def gen_policy(i):
         config = {
+            "agent_id": i,
             "model": {
                 # Change individual keys in that dict by overriding them, e.g.
                 "fcnet_hiddens": [64, 64, 64],
                 "fcnet_activation": "relu",
-                "use_lstm": False,
+                "use_lstm": True,
             },
             "gamma": 0.99,
         }
-        return (None, obs_space, act_space, config)
+        return PolicySpec(None, obs_space, act_space, config)
 
-    # policy_ids = list(policies.keys())
-    policies = {f"player_{a}": PolicySpec(observation_space=obs_space,
-                       action_space=act_space,
-                       config={"agent_id": a}) for a in range(num_agents)}
+    policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
     policy_ids = list(policies.keys())
 
     tune.run(
