@@ -65,7 +65,7 @@ class Trade(MultiAgentEnv):
         print(f"table: {self.table}")
         print(f"Total exchanged so far: {self.num_exchanges}")
         for agent, comm in self.communications.items():
-            if max(comm) >= 1:
+            if comm and max(comm) >= 1:
                 print(f"{agent} said {comm.index(1)}")
 
     def compute_observation(self, agent=None):
@@ -137,7 +137,7 @@ class TradeCallback(DefaultCallbacks):
         # there is a bug where on_episode_step gets called where it shouldn't
         env = base_env.get_unwrapped()[0]
         for agent, comm in env.communications.items():
-            if max(comm) == 1:
+            if comm and max(comm) == 1:
                 symbol = comm.index(1)
                 self.comm_history[symbol] += 1
 
@@ -151,7 +151,7 @@ class TradeCallback(DefaultCallbacks):
 
 if __name__ == "__main__":
     num_agents = 3
-    env_config = {"food_types": num_agents, "num_agents": num_agents, "episode_length": 100}
+    env_config = {"food_types": num_agents, "num_agents": num_agents, "episode_length": 100, "vocab_size": 0}
     tenv = Trade(env_config)
     obs = tenv.reset()
     for i in range(100):
