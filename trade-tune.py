@@ -1,3 +1,4 @@
+import torch
 from ray import tune
 from ray.tune.registry import register_env
 from ray.rllib.policy.policy import PolicySpec
@@ -39,7 +40,7 @@ if __name__ == "__main__":
 
     register_env(env_name, lambda config: Trade(config))
 
-    num_agents = 2
+    num_agents = 3
     env_config = {"food_types": num_agents, "num_agents": num_agents, "episode_length": 100}
 
     test_env = Trade(env_config)
@@ -68,8 +69,8 @@ if __name__ == "__main__":
         scheduler=pbt,
         metric="episode_reward_mean",
         mode="max",
-        num_samples=1,
-        stop={"timesteps_total": 1_500_000},
+        num_samples=6,
+        stop={"timesteps_total": 100_000},
         checkpoint_freq=10,
         local_dir="~/ray_results/"+env_name,
         config={
@@ -79,8 +80,8 @@ if __name__ == "__main__":
             "callbacks": TradeCallback,
             # General
             "log_level": "ERROR",
-            "framework": "tf",
-            "num_gpus": 0,
+            "framework": "torch",
+            "num_gpus": 0.5,
             "num_workers": 1,
             "num_envs_per_worker": 1,
             "compress_observations": False,
