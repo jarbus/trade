@@ -41,7 +41,7 @@ if __name__ == "__main__":
     register_env(env_name, lambda config: Trade(config))
 
     num_agents = 3
-    env_config = {"food_types": num_agents, "num_agents": num_agents, "episode_length": 100}
+    env_config = {"food_types": num_agents, "num_agents": num_agents, "episode_length": 100, "vocab_size": 0}
 
     test_env = Trade(env_config)
     obs_space = test_env.observation_space
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         scheduler=pbt,
         metric="episode_reward_mean",
         mode="max",
-        num_samples=6,
+        num_samples=10,
         stop={"timesteps_total": 100_000},
         checkpoint_freq=10,
         local_dir="~/ray_results/"+env_name,
@@ -81,8 +81,8 @@ if __name__ == "__main__":
             # General
             "log_level": "ERROR",
             "framework": "torch",
-            "num_gpus": 0.5,
-            "num_workers": 1,
+            "num_gpus": 0.75,
+            "num_workers": 4,
             "num_envs_per_worker": 1,
             "compress_observations": False,
             "batch_mode": 'truncate_episodes',
