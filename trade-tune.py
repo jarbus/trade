@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     def gen_policy(i):
         config = {
-            # "agent_id": i,
+            #"agent_id": i,
             "model": {
                 # Change individual keys in that dict by overriding them, e.g.
                 "fcnet_hiddens": [64, 64, 64],
