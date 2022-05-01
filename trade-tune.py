@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     def gen_policy(i):
         config = {
-            "agent_id": i,
+            # "agent_id": i,
             "model": {
                 # Change individual keys in that dict by overriding them, e.g.
                 "fcnet_hiddens": [64, 64, 64],
@@ -60,7 +60,9 @@ if __name__ == "__main__":
         }
         return PolicySpec(None, obs_space, act_space, config)
 
-    policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
+    # policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
+    policy = gen_policy(0)
+    policies = {f"player_{a}": policy for a in range(num_agents)}
     policy_ids = list(policies.keys())
 
     tune.run(
