@@ -58,8 +58,8 @@ class Trade(MultiAgentEnv):
         elif self.scale_rule == "random":
             g_len = randint(1, 8)
             new_grid_size = (g_len, g_len)
-        elif self.scale_rule == "1m":
-            g_len = int(self.total_steps / 500_000) + 3
+        elif self.scale_rule == "increase":
+            g_len = (2*int(self.total_steps / 500_000)) + 3
             new_grid_size = (g_len, g_len)
         config = {
             "food_types": self.food_types,
@@ -74,12 +74,14 @@ class Trade(MultiAgentEnv):
 
         self.agents = self.possible_agents[:]
         # TODO better starting pos
-        self.agent_positions = {agent: (0, 0) for agent in self.agents}
+        gx, gy = self.grid_size
+        self.agent_positions = {agent: (randint(0, gx-1), randint(0, gy-1)) for agent in self.agents}
         # Grid of placed food
         self.table = np.zeros((*self.grid_size, self.food_types, len(self.agents)), dtype=np.float32)
         self.steps = 0
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
         self.num_exchanges = [0]*self.food_types
+        self.lifetimes = {agent: 0 for agent in self.agents}
         self.agent_food_counts = dict()
         for i, agent in enumerate(self.agents):
             self.agent_food_counts[agent] = []
@@ -185,6 +187,9 @@ class Trade(MultiAgentEnv):
 
         obs = {agent: self.compute_observation(agent) for agent in actions.keys()}
         dones = {agent: self.compute_done(agent) for agent in actions.keys()}
+        for agent, done in dones.items():
+            if not done:
+                self.lifetimes[agent] += 1
         rewards = {agent: self.compute_reward(agent) for agent in actions.keys()}
 
         dones = {**dones, "__all__": all(dones.values())}
@@ -211,6 +216,9 @@ class TradeCallback(DefaultCallbacks):
             episode.custom_metrics[f"exchange_{food}"] = count
         for symbol, count in enumerate(self.comm_history):
             episode.custom_metrics[f"comm_{symbol}"] = count
+        for agent, lifetime in env.lifetimes.items():
+            episode.custom_metrics[f"{agent}_lifetime"] = lifetime
+
 
 
 if __name__ == "__main__":
