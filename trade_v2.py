@@ -1,4 +1,3 @@
-# TODO IMPORTANT: you need to figure out how to get a better convolutional representation of food counts when agents are stacked on the same square
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gym.spaces import Discrete, Box
 import numpy as np
@@ -56,10 +55,10 @@ class Trade(MultiAgentEnv):
         if not self.scale_rule:
             new_grid_size = self.grid_size
         elif self.scale_rule == "random":
-            g_len = randint(1, 8)
+            g_len = randint(1, 15)
             new_grid_size = (g_len, g_len)
         elif self.scale_rule == "increase":
-            g_len = (2*int(self.total_steps / 500_000)) + 3
+            g_len = (2*int(self.total_steps / 500_000)) + 1
             new_grid_size = (g_len, g_len)
         config = {
             "food_types": self.food_types,
@@ -69,6 +68,7 @@ class Trade(MultiAgentEnv):
             "num_agents": len(self.agents),
             "empathy": self.empathy,
             "grid": new_grid_size,
+            "scale": self.scale_rule,
         }
         self.__init__(config)
 
@@ -218,6 +218,7 @@ class TradeCallback(DefaultCallbacks):
             episode.custom_metrics[f"comm_{symbol}"] = count
         for agent, lifetime in env.lifetimes.items():
             episode.custom_metrics[f"{agent}_lifetime"] = lifetime
+        episode.custom_metrics[f"total_steps"] = env.total_steps
 
 
 

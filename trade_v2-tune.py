@@ -13,9 +13,6 @@ parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--second-cluster', action='store_true')
 args = parser.parse_args()
 
-
-
-
 # Postprocess the perturbed config to ensure it's still valid
 def explore(config):
     # ensure we collect enough timesteps to do sgd
@@ -67,7 +64,7 @@ if __name__ == "__main__":
                   "food_types": num_agents,
                   "num_agents": num_agents,
                   "episode_length": 100,
-                  "scale": "1m", #1m random or None
+                  "scale": "increase", #increase random or None
                   "vocab_size": 0}
 
     test_env = Trade(env_config)
@@ -105,13 +102,13 @@ if __name__ == "__main__":
 
     tune.run(
         ReusablePPOTrainer,
-        name=f"increase grid 2f_min",
+        name=f"increase fix 4mstep",
         scheduler=pbt,
         metric="episode_reward_mean",
         mode="max",
         resume=False,
         num_samples=16,
-        stop={"timesteps_total": 3_000_000, "episode_len_mean": 30},
+        stop={"timesteps_total": 4_000_000},
         checkpoint_freq=40,
         reuse_actors=True,
         #local_dir="~/ray_results/"+env_name,
@@ -138,8 +135,8 @@ if __name__ == "__main__":
             'vf_loss_coeff': 0.25,
             # These params start off randomly drawn from a set.
             "num_sgd_iter": tune.choice([5, 10, 15]),
-            "sgd_minibatch_size": 2000,
-            "train_batch_size": 2000,
+            "sgd_minibatch_size": 500,
+            "train_batch_size": 500,
             'rollout_fragment_length': 100,
             'lr': 2e-05,
             # Method specific
