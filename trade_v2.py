@@ -4,7 +4,7 @@ import numpy as np
 from random import randint
 from math import floor
 from ray.rllib.agents.callbacks import DefaultCallbacks
-from utils import add_tup, directions, valid_pos
+from utils import add_tup, directions, valid_pos, inv_dist
 from pdb import set_trace as T
 
 NUM_ITERS = 100
@@ -57,6 +57,7 @@ class Trade(MultiAgentEnv):
         elif self.scale_rule == "random":
             g_len = randint(1, 15)
             new_grid_size = (g_len, g_len)
+        # does not work
         elif self.scale_rule == "increase":
             g_len = (2*int(self.total_steps / 500_000)) + 1
             new_grid_size = (g_len, g_len)
@@ -114,11 +115,13 @@ class Trade(MultiAgentEnv):
         food_frames = self.table.sum(axis=3).transpose(2, 0, 1)  # frame for each food
         other_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
         self_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
+        comm_frames = np.zeros((self.vocab_size, *self.grid_size), dtype=np.float32)
         agent_frame = np.zeros(self.grid_size, dtype=np.float32)
         self_frame = np.zeros(self.grid_size, dtype=np.float32)
         self_frame[ax, ay] = 1
         for a in self.agents:
             oax, oay = self.agent_positions[a]
+            comm_frames[:, oax, oay] = self.communications[a]
             if a != agent:
                 agent_frame[oax, oay] += 1
             for f in range(self.food_types):
@@ -128,14 +131,14 @@ class Trade(MultiAgentEnv):
                     self_food_frames[f, oax, oay] += self.agent_food_counts[a][f]
         xpos_frame = np.repeat(np.arange(gy).reshape(1, gy), gx, axis=0) / gx
         ypos_frame = np.repeat(np.arange(gx).reshape(gx, 1), gy, axis=1) / gy
-        frames = np.stack([*food_frames, *self_food_frames, *other_food_frames, agent_frame, self_frame, xpos_frame, ypos_frame])
+        frames = np.stack([*food_frames, *self_food_frames, *other_food_frames, *comm_frames, agent_frame, self_frame, xpos_frame, ypos_frame])
         padded_frames = np.full((frames.shape[0], *self.padded_grid_size), -1, dtype=np.float32)
         padded_frames[:, wx:(gx+wx), wy:(gy+wy)] = frames
         obs = padded_frames[:, minx:maxx, miny:maxy] / 30
         return obs
 
     def compute_done(self, agent):
-        if sum(f <= 0.1 for f in self.agent_food_counts[agent]) >= 2 or self.steps >= self.max_steps:
+        if sum(f < 0.1 for f in self.agent_food_counts[agent]) >= 2 or self.steps >= self.max_steps:
             return True
         return False
 
@@ -144,9 +147,15 @@ class Trade(MultiAgentEnv):
         rew = 0
         if self.compute_done(agent):
             return rew
+        pos = self.agent_positions[agent]
         for a in self.agents:
             if not self.compute_done(a):
-                rew += 1 if a == agent else self.empathy
+                rew += inv_dist(pos, self.agent_positions[a])
+        #for f in self.agent_food_counts[agent]:
+        #    if f >= 0.1:
+        #        rew += 1
+        #    else:
+        #        rew += -1
         return rew
 
     def compute_exchange_amount(self, x: int, y: int, food: int, picker: int):
@@ -199,7 +208,10 @@ class Trade(MultiAgentEnv):
 class TradeCallback(DefaultCallbacks):
 
     def on_episode_start(self, worker, base_env, policies, episode, **kwargs):
-        self.comm_history = [0 for i in range(base_env.get_unwrapped()[0].vocab_size)]
+        env = base_env.get_unwrapped()[0]
+        self.comm_history = [0 for i in range(env.vocab_size)]
+        self.agent_dists = []
+        self.action_counts = {act: 0 for act in env.MOVES}
 
     def on_episode_step(self, worker, base_env, policies, episode, **kwargs):
         # there is a bug where on_episode_step gets called where it shouldn't
@@ -208,6 +220,18 @@ class TradeCallback(DefaultCallbacks):
             if comm and max(comm) == 1:
                 symbol = comm.index(1)
                 self.comm_history[symbol] += 1
+        dists = {}
+        for i, a in enumerate(env.agents[:-1]):
+            for j, b in enumerate(env.agents[i+1:]):
+                if env.compute_done(a) or env.compute_done(b):
+                    continue
+                dists[(a,b)] = inv_dist(env.agent_positions[a], env.agent_positions[b])
+        self.agent_dists.append(sum(dists.values()) / max(1, len(dists.values())))
+        for a in env.agents:
+            if env.compute_done(a):
+                self.action_counts[env.MOVES[episode.last_action_for(a)]] += 1
+
+
 
     def on_episode_end(self, worker, base_env, policies, episode, **kwargs,):
         env = base_env.get_unwrapped()[0]
@@ -219,6 +243,11 @@ class TradeCallback(DefaultCallbacks):
         for agent, lifetime in env.lifetimes.items():
             episode.custom_metrics[f"{agent}_lifetime"] = lifetime
         episode.custom_metrics[f"total_steps"] = env.total_steps
+        episode.custom_metrics[f"avg_avg_dist"] = sum(self.agent_dists) / len(self.agent_dists)
+        total_number_of_actions = sum(self.action_counts.values())
+        if total_number_of_actions > 0:
+            for act, count in self.action_counts.items():
+                episode.custom_metrics[f"percent_{act}"] = count / total_number_of_actions
 
 
 

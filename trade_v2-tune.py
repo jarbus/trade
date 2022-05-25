@@ -64,7 +64,7 @@ if __name__ == "__main__":
                   "food_types": num_agents,
                   "num_agents": num_agents,
                   "episode_length": 100,
-                  "scale": "increase", #increase random or None
+                  "scale": None, #increase random or None
                   "vocab_size": 0}
 
     test_env = Trade(env_config)
@@ -73,7 +73,6 @@ if __name__ == "__main__":
 
     def gen_policy(i):
         config = {
-            # "agent_id": i,
             "model": {
                 # Change individual keys in that dict by overriding them, e.g.
                 "conv_filters": [[64, [3, 3], 1], [64, [3, 3], 1], [64, [3, 3], 1]],
@@ -81,15 +80,6 @@ if __name__ == "__main__":
                 "post_fcnet_hiddens": [64, 64],
                 "post_fcnet_activation": "relu",
                 "use_lstm": True,
-                #"use_attention": True,
-                #"attention_num_transformer_units": 1,
-                #"attention_dim": 64,
-                #"attention_num_heads": 2,
-                #"attention_memory_inference": 100,
-                #"attention_memory_training": 50,
-                #"vf_share_layers": False,
-                #"attention_use_n_prev_actions": 2,
-                #"attention_use_n_prev_rewards": 2,
             },
             "gamma": 0.99,
         }
@@ -102,7 +92,7 @@ if __name__ == "__main__":
 
     tune.run(
         ReusablePPOTrainer,
-        name=f"increase fix 4mstep",
+        name=f"old method {env_config['grid']}",
         scheduler=pbt,
         metric="episode_reward_mean",
         mode="max",
@@ -112,7 +102,7 @@ if __name__ == "__main__":
         checkpoint_freq=40,
         reuse_actors=True,
         #local_dir="~/ray_results/"+env_name,
-        local_dir="/work/garbus/ray_results/scaling",
+        local_dir="/work/garbus/ray_results/new_reward",
         config={
             # Environment specific
             "env": env_name,
@@ -128,15 +118,13 @@ if __name__ == "__main__":
             "batch_mode": 'complete_episodes',
             "lambda": 0.95,
             "gamma": .99,
-            # "kl_coeff": 0.001,
-            # "kl_target": 1000.,
             "clip_param": tune.choice([0.05, 0.1, 0.2]),
-            "entropy_coeff": tune.choice([0.1, 0.2, 0.3]),
+            "entropy_coeff": tune.choice([0.01, 0.05, 0.1]),
             'vf_loss_coeff': 0.25,
             # These params start off randomly drawn from a set.
             "num_sgd_iter": tune.choice([5, 10, 15]),
-            "sgd_minibatch_size": 500,
-            "train_batch_size": 500,
+            "sgd_minibatch_size": 200,
+            "train_batch_size": 200,
             'rollout_fragment_length': 100,
             'lr': 2e-05,
             # Method specific
