@@ -1,0 +1,74 @@
+Following use the same policy for all agents
+- might be better to use different policy?
+
+----- Experiments, 0d ----------------
+Initial 1x1 vision test:
+    - agents are able to learn exchange behavior
+    - currently agents food counts will be obstructed
+    if they are on top of a tile with another agent
+        - need to separate agent food count from other
+        agent food counts
+Seperate Food Counts Test:
+    - Sanity test to confirm agents can learn in 0-d case when food is
+      seperated, assumed true
+More channels:
+    - Check to make sure networks have enough capacity to trade
+    - still 0d
+    - agents learn to trade
+-------Experiments 1d ------------------
+1d, 1x5 3 agents:
+    can agents learn to trade in the 1-dimensional case?
+    4x4 window
+    might need to use positional encodings if they struggle to navigate
+    COMPLETELY AND UTTERLY FAILS, as DM paper suggested
+        actions are too generic
+    Maybe try with two agents.
+    Maybe take agents learned from 0d case and transfer them to 1d?
+    Maybe bigger batch size?
+
+1d 1x5 2 agents (5a65e):
+    agents can learn to trade in 2d, even with same policy
+1d 1x5 3 agents different policy:
+    batch size 2k
+    higher entropy potential
+    expected result: Trading will not emerge
+2 food to live (1d):
+    Trade 1d 3 agent with only needing another type of food
+    since agents are rewarded for each player alive, this is a smooth gradient i think
+    agents are able to trade
+2 food to live (2x5):
+    agents start on bottom row in same spot everytime
+    trading emerges
+2 food to live (2x2), random starts:
+    trading emerges
+2 food to live (3x3), random starts:
+    trading emerges
+2 food to live (7x7), random starts:
+    trading fails to emerge
+    window 3x3
+    maybe agents just fail to learn to trade locally?
+
+2 food to live, random grid size, random starts:
+    positional encoding
+    theory: agents will learn to trade in small environments, then transfer that behavior to large environments
+        so far not holding up
+    fails on 3.5 million, might need more timesteps
+
+
+10m steps: 2 food to live, random grid size, random starts:
+    trial seemed to stop producing tensorboard log
+    trial jumped up every now and then, el=16 after about 6.5 million iter
+10m steps: 2 food to live, 1/m grid size increase, random starts:
+    agents seemed to learn to trade but only one exchange after a long time
+
+Theory: larger window size makes it harder to learn trade
+------ Window Experiments -------
+issue: in 1x1 settings, agents aren't learning to trade fast
+Window (1,1), grid(1,1):
+Window (2,2), grid(1,1):
+Window (2,2), grid(2,2):
+somehow this got reset to old done status, ignore this
+
+
+===== Next =====
+Agents get rewarded for being close to another agent

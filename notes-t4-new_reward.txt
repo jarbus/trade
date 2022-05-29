@@ -1,0 +1,36 @@
+---- Notes on new reward experiments ----
+reshaping reward so that agents can learn to trade on large maps
+
+agents die if they run out of all food, otherwise they take -1 rew
+for each food they are out of, or log(f) for f >= 0.1
+return inv_dist reward for each agent
+
+3x3: Confirm that this reward function can work at all
+    no
+15x15: see if this reward function can work on large maps
+    no
+agents are somehow getting a sub-ten lifetime mean and plenty of 0 lifetime min
+
+(3, 3): replace log with +1
+fails
+
+If this doesn't work, might need to add a penalty for dying,
+agents will have incentive to die asap instead of learn to exchange
+by dropping their goods.
+or maybe just remove dying
+or just reward having any amount of food with a +1
+
+or maybe don't do this, the "compute_done" might be more important.
+generally speaking, living is good.
+agents with 2 foods need to surive longer than agents with one food
+do I need three foods?
+two foods, food collection
+
+axioms: live as long as possible <--- when should there be death?
+- when any of the resources needed are not met
+live as good of a life as possible
+be social
+don't expend too much energy
+don't starve
+
+1D: food at edge of map, agents go to collect it, then trade

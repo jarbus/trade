@@ -1,0 +1,25 @@
+---- Notes on Scaling ----
+I have this working for small grids (3x3), but
+drop mechanic doesn't emerge for larger worlds.
+Trying to train on small worlds and see if that
+works on large worlds.
+
+Added: serve for trade_v2
+Added: lifetime metric, to view lifetime of each player
+Fixed: all agents were starting off at (0,0)
+
+"Scale to 15 4m" and "random 4m"
+    Goal is to scale to 15x15 trading scenario
+    window size 2,2, empathy 1
+    scale: grid side = 2*(steps / 500k) + 1
+    random: grid side = randint(1, 15)
+    batch size = 500
+    smaller architecture
+
+    Results: Random fails, scale can't increase grid size
+    due to total number of steps getting reset
+
+Added: replaced scaling and empathy with inverted agent distance
+
+Experiment: 3x3, 7x7 with inverted agent distance
+
