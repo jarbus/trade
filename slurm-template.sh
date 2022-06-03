@@ -14,7 +14,6 @@
 #SBATCH --partition=guest-gpu
 #SBATCH --gres=gpu:TitanX:8
 #SBATCH --nodes=2
-#SBATCH --nodelist="gpu-6-[0-1]"
 #SBATCH --exclusive
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
@@ -69,4 +68,4 @@ done
 sleep 30
 
 # ===== Call your code below =====
-${COMMAND_PLACEHOLDER}
+${COMMAND_PLACEHOLDER} --ip $ip_head

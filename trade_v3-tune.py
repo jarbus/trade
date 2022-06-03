@@ -9,8 +9,8 @@ from ray.tune.schedulers import PopulationBasedTraining
 import random
 import argparse
 
-parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--second-cluster', action='store_true')
+parser = argparse.ArgumentParser(description='Execute Trading Environment.')
+parser.add_argument('--ip', type=str)
 args = parser.parse_args()
 
 # Postprocess the perturbed config to ensure it's still valid
@@ -48,10 +48,8 @@ pbt = PopulationBasedTraining(
 
 if __name__ == "__main__":
 
-    if args.second_cluster:
-        ray.init(address="10.2.255.57:6380", _redis_password="longredispassword")
-    else:
-        ray.init(address="10.2.255.59:6379", _redis_password="longredispassword")
+    if args.ip:
+        ray.init(address=args.ip, _redis_password="longredispassword")
 
     env_name = "trade_v3"
 

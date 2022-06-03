@@ -14,7 +14,6 @@
 #SBATCH --partition=guest-gpu
 #SBATCH --gres=gpu:TitanX:8
 #SBATCH --nodes=2
-#SBATCH --nodelist="gpu-6-[2-3]"
 #SBATCH --exclusive
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
