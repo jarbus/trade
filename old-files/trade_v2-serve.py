@@ -78,7 +78,8 @@ if __name__ == "__main__":
     )
 
     # trainer.restore("/home/jack/ray_results/trade_v1/PPO/PPO_trade_v1_1bff5_00000_0_2022-04-28_11-37-28/checkpoint_000280/checkpoint-280")
-    trainer.restore("/work/garbus/ray_results/scaling/random grid 2f_min/ReusablePPOTrainer_trade_v2_eda5b_00002_2_clip_param=0.1,entropy_coeff=0.2,num_sgd_iter=10_2022-05-22_16-08-59/checkpoint_000600/checkpoint-600")
+    #trainer.restore("/work/garbus/ray_results/scaling/random grid 2f_min/ReusablePPOTrainer_trade_v2_eda5b_00002_2_clip_param=0.1,entropy_coeff=0.2,num_sgd_iter=10_2022-05-22_16-08-59/checkpoint_000600/checkpoint-600")
+    trainer.restore("/work/garbus/ray_results/2d4a/better_spawns_no_crowding_penalty/ReusablePPOTrainer_trade_v3_2ad9b_00002_2_lr=0.001_2022-06-01_16-27-39/checkpoint_001200/checkpoint-1200")
 
     obss = test_env.reset()
     states = {}

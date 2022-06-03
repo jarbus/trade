@@ -16,6 +16,7 @@ class Trade(MultiAgentEnv):
         num_agents = env_config.get("num_agents", 2)
         self.max_steps = env_config.get("episode_length", 100)
         self.vocab_size = env_config.get("vocab_size", 6)
+        self.empathy = env_config.get("empathy", 1)
         super().__init__()
         self.num_inputs = self.food_types * (num_agents+1) + (self.vocab_size*num_agents)
         self.agent_food_counts = dict()
@@ -34,7 +35,7 @@ class Trade(MultiAgentEnv):
         self.agent_name_mapping = dict(zip(self.possible_agents, list(range(len(self.possible_agents)))))
 
         self.action_space = Discrete(self.num_actions)
-        self.observation_space = Box(low=np.array([-1 for _ in range(self.num_inputs)]), high=np.array([10 for _ in range(self.num_inputs)]))
+        self.observation_space = Box(low=np.array([-1 for _ in range(self.num_inputs)],dtype=np.float32), high=np.array([10 for _ in range(self.num_inputs)], dtype=np.float32))
         self._skip_env_checking = True
 
     def seed(self, seed=None):
@@ -87,11 +88,20 @@ class Trade(MultiAgentEnv):
         return False
 
     def compute_reward(self, agent):
+        # reward for each living player
+        rew = 0
         if self.compute_done(agent):
-            return 0
-        return 1
+            return rew
+        for a in self.agents:
+            if not self.compute_done(a):
+                rew += 1 if a == agent else self.empathy
+        return rew
+        # reward for self
+        #if self.compute_done(agent):
+        #    return 0
+        #return 1
 
-    def compute_exchange_amount(self, food: int, picker:int):
+    def compute_exchange_amount(self, food: int, picker: int):
         return sum(self.exchange_table[food][agent] for agent in self.exchange_table[food].keys() if agent != picker)
 
     def step(self, actions):

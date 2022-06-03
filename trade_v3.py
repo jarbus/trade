@@ -1,11 +1,12 @@
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gym.spaces import Discrete, Box
 import numpy as np
-from random import randint, random, shuffle
+from random import randint, random, shuffle, choice
 from math import floor
 from ray.rllib.agents.callbacks import DefaultCallbacks
-from utils import add_tup, directions, valid_pos, inv_dist
+from utils import add_tup, directions, valid_pos, inv_dist, two_combos
 from pdb import set_trace as T
+import sys
 
 NUM_ITERS = 100
 PLACE_AMOUNT = 0.5
@@ -56,46 +57,41 @@ class Trade(MultiAgentEnv):
         self.moved_last_turn = {agent: False for agent in self.agents}
         self.picked_counts = {agent: [0] * self.food_types for agent in self.agents}
         self.placed_counts = {agent: [0] * self.food_types for agent in self.agents}
-        # TODO better starting pos
         gx, gy = self.grid_size
-        #self.agent_positions = {agent: (randint(0, gx-1), randint(0, gy-1)) for agent in self.agents}
-        self.agent_positions = {"player_0": (0, 2), "player_1": (0, 4)}
-        # Grid of placed food
         # use the last slot in the agents dimension to specify naturally spawning food
         self.table = np.zeros((*self.grid_size, self.food_types, len(self.agents)+1), dtype=np.float32)
-        self.table[0, 1, 0, len(self.agents)] = 4
-        self.table[0, 5, 1, len(self.agents)] = 4
+
+        # Usage: random.choice(self.spawn_spots[0-4])
+        self.spawn_spots = [[(0,1), (0, 1)], [(0,1), (gy-2,gy-1)], [(gx-2,gx-1), (0,1)], [(gx-2,gx-1), (gy-2,gy-1)]]
+        self.spawn_spots = [two_combos(xs, ys) for (xs, ys) in self.spawn_spots]
+        food_counts = [(0, 10), (0, 10), (1, 10), (1, 10)]
+        shuffle(food_counts)
+        for spawn_spot, (ft, fc) in zip(self.spawn_spots, food_counts):
+            fx, fy = choice(spawn_spot)
+            self.table[fx, fy, ft, len(self.agents)] = fc
+        self.agent_positions = {agent: choice(spawn_spots) for agent, spawn_spots in zip(self.agents, self.spawn_spots)}
         self.steps = 0
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
         self.num_exchanges = [0]*self.food_types
         self.lifetimes = {agent: 0 for agent in self.agents}
-        self.agent_food_counts = dict()
-        for i, agent in enumerate(self.agents):
-            self.agent_food_counts[agent] = []
-            for j in range(self.food_types):
-                if i == j:
-                    self.agent_food_counts[agent].append(1)
-                else:
-                    self.agent_food_counts[agent].append(1)
+        self.agent_food_counts = {"player_0": [1, 1], "player_1": [1, 1], "player_2": [1, 1], "player_3": [1, 1]}
         return {agent: self.compute_observation(agent) for agent in self.agents}
 
-    def render(self, mode="human"):
+    def render(self, mode="human", out=sys.stdout):
         for agent in self.agents:
-            print(f"{agent}: {self.agent_positions[agent]} {self.agent_food_counts[agent]} {self.compute_done(agent)}")
+            out.write(f"{agent}: {self.agent_positions[agent]} {[round(fc, 2) for fc in self.agent_food_counts[agent]]} {self.compute_done(agent)}\n")
         for food in range(self.food_types):
-            print(f"food{food}: {self.table[:,:,food].sum(axis=2)}")
-        print(f"Total exchanged so far: {self.num_exchanges}")
+            out.write(f"food{food}:\n {self.table[:,:,food].sum(axis=2)}\n")
+        out.write(f"Total exchanged so far: {self.num_exchanges}\n")
         for agent, comm in self.communications.items():
             if comm and max(comm) >= 1:
-                print(f"{agent} said {comm.index(1)}")
+                out.write(f"{agent} said {comm.index(1)}\n")
 
     def compute_observation(self, agent=None):
-        # stores action of current agent
         ax, ay = self.agent_positions[agent]
         wx, wy = self.window_size
         gx, gy = self.grid_size
 
-        # TODO ADD COMMUNICATION
         minx, maxx = ax, ax+(2*wx)+1
         miny, maxy = ay, ay+(2*wy)+1
         food_frames = self.table.sum(axis=3).transpose(2, 0, 1)  # frame for each food
@@ -123,11 +119,6 @@ class Trade(MultiAgentEnv):
         obs = padded_frames[:, minx:maxx, miny:maxy] / 30
         return obs
 
-    #def compute_done(self, agent):
-    #    if any(f < 0.1 for f in self.agent_food_counts[agent]) or self.steps >= self.max_steps:
-    #        return True
-    #    return False
-
     def compute_done(self, agent):
         if self.dones[agent] or self.steps >= self.max_steps:
             return True
@@ -140,10 +131,18 @@ class Trade(MultiAgentEnv):
         if self.compute_done(agent):
             return rew
         pos = self.agent_positions[agent]
+        same_poses = 0
+        dists = [0]
         for a in self.agents:
-            if not self.compute_done(a):
-                rew += self.dist_coeff * inv_dist(pos, self.agent_positions[a])
+            if not self.compute_done(a) and a != agent:
+                #rew += self.dist_coeff * inv_dist(pos, self.agent_positions[a])
+                dists.append(inv_dist(pos, self.agent_positions[a]))
+                #if self.agent_positions[a] == pos:
+                #    same_poses += 1
+        rew = 1 + (self.dist_coeff * max(dists))
         rew -= self.move_coeff * int(self.moved_last_turn[agent])
+        #if same_poses > 2:
+        #    rew -= same_poses
         return rew
 
     def compute_exchange_amount(self, x: int, y: int, food: int, picker: int):
@@ -187,16 +186,21 @@ class Trade(MultiAgentEnv):
                 self.communications[agent][symbol] = 1
 
         for agent in self.agents:
+            if self.compute_done(agent):
+                continue
             self.agent_food_counts[agent] = [max(x - 0.1, 0) for x in self.agent_food_counts[agent]]
-            for f in self.agent_food_counts[agent]:
-                if f < 0.1 and random() < self.death_prob:
+            if max(self.agent_food_counts[agent]) < 0.1:
                     self.dones[agent] = True
+            else:
+                for f in self.agent_food_counts[agent]:
+                    if f < 0.1 and random() < self.death_prob:
+                        self.dones[agent] = True
 
         # RESET FOOD EVERY TEN ITERS
         self.steps += 1
-        if self.steps % 10 == 0 and self.steps > 15:
-            self.table[0, 1, 0, len(self.agents)] = 4
-            self.table[0, 5, 1, len(self.agents)] = 4
+        #if self.steps == 30:
+        #    self.table[0, 0, 0, len(self.agents)] = 10
+        #    self.table[4, 4, 1, len(self.agents)] = 10
 
         obs = {agent: self.compute_observation(agent) for agent in actions.keys()}
         dones = {agent: self.compute_done(agent) for agent in actions.keys()}
@@ -248,6 +252,8 @@ class TradeCallback(DefaultCallbacks):
             episode.custom_metrics[f"comm_{symbol}"] = count
         for agent in env.agents:
             episode.custom_metrics[f"{agent}_lifetime"] = env.lifetimes[agent]
+            episode.custom_metrics[f"{agent}_food_imbalance"] = \
+                max(env.agent_food_counts[agent]) / max(1, min(env.agent_food_counts[agent]))
             for food in range(env.food_types):
                 episode.custom_metrics[f"{agent}_PICK_{food}"] = env.picked_counts[agent][food]
                 episode.custom_metrics[f"{agent}_PLACE_{food}"] = env.placed_counts[agent][food]
@@ -261,12 +267,12 @@ class TradeCallback(DefaultCallbacks):
 
 
 if __name__ == "__main__":
-    num_agents = 3
+    num_agents = 4
     env_config = {"window": (2, 2),
-                  "grid": (2, 3),
-                  "food_types": num_agents,
+                  "grid": (5, 5),
+                  "food_types": 2,
                   "num_agents": num_agents,
-                  "episode_length": 100,
+                  "episode_length": 200,
                   "vocab_size": 0}
     tenv = Trade(env_config)
     obs = tenv.reset()

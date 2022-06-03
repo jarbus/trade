@@ -17,10 +17,10 @@ args = parser.parse_args()
 def explore(config):
     # ensure we collect enough timesteps to do sgd
     #if config["train_batch_size"] < config["sgd_minibatch_size"] * 2:
-    config["train_batch_size"] = config["sgd_minibatch_size"]
+    config["sgd_minibatch_size"] = config["train_batch_size"]
     # ensure we run at least one sgd iter
-    if config["num_sgd_iter"] < 1:
-        config["num_sgd_iter"] = 1
+    #if config["num_sgd_iter"] < 1:
+    #    config["num_sgd_iter"] = 1
     return config
 
 class ReusablePPOTrainer(ppo.PPOTrainer):
@@ -31,7 +31,7 @@ class ReusablePPOTrainer(ppo.PPOTrainer):
 
 pbt = PopulationBasedTraining(
     time_attr="time_total_s",
-    perturbation_interval=400,
+    perturbation_interval=400_000_000_000_000,
     resample_probability=0.25,
     # Specifies the mutations of these hyperparams
     hyperparam_mutations={
@@ -40,6 +40,7 @@ pbt = PopulationBasedTraining(
         "entropy_coeff": lambda: random.uniform(0.01, 0.2),
         "lr": [1e-3, 5e-4, 1e-4, 5e-5, 1e-5],
         "num_sgd_iter": lambda: random.randint(1, 10),
+        "train_batch_size": [1000, 2000, 4000],
     },
     custom_explore_fn=explore,
 )
@@ -56,14 +57,14 @@ if __name__ == "__main__":
 
     register_env(env_name, lambda config: Trade(config))
 
-    num_agents = 2
+    num_agents = 4
     # env_config = {"food_types": num_agents, "num_agents": num_agents, "episode_length": 20, "vocab_size": 0}
 
-    env_config = {"window": (2, 2),
-                  "grid": (1, 7),
+    env_config = {"window": (3, 3),
+                  "grid": (5, 5),
                   "food_types": 2,
-                  "num_agents": 2,
-                  "episode_length": 100,
+                  "num_agents": num_agents,
+                  "episode_length": 200,
                   "move_coeff": 0.0,
                   "dist_coeff": 0.1,
                   "death_prob": 0.1,
@@ -82,6 +83,7 @@ if __name__ == "__main__":
                 "post_fcnet_hiddens": [64, 64],
                 "post_fcnet_activation": "relu",
                 "use_lstm": True,
+                "max_seq_len": 200,
             },
             "gamma": 0.99,
         }
@@ -92,21 +94,21 @@ if __name__ == "__main__":
     policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
     policy_ids = list(policies.keys())
 
-    batch_size = 2000
+    batch_size = 1000
 
     tune.run(
         ReusablePPOTrainer,
-        name=f"4 every 10 > 15 batch=2k 10m with pbt",
+        name=f"10_percent_100_percent_nopbt_el200_50m",
         scheduler=pbt,
-        metric="episode_len_mean",
+        metric="episode_reward_mean",
         mode="max",
         resume=False,
         num_samples=16,
-        stop={"timesteps_total": 10_000_000},
+        stop={"timesteps_total": 50_000_000},
         checkpoint_freq=400,
         reuse_actors=True,
         #local_dir="~/ray_results/"+env_name,
-        local_dir="/work/garbus/ray_results/respawn_food",
+        local_dir="/work/garbus/ray_results/grouping",
         config={
             # Environment specific
             "env": env_name,
@@ -126,7 +128,7 @@ if __name__ == "__main__":
             "entropy_coeff": 0.05,
             'vf_loss_coeff': 0.25,
             # These params start off randomly drawn from a set.
-            "num_sgd_iter": 3,
+            "num_sgd_iter": 5,
             "sgd_minibatch_size": batch_size,
             "train_batch_size": batch_size,
             'rollout_fragment_length': 100,

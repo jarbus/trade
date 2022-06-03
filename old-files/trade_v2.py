@@ -20,12 +20,8 @@ class Trade(MultiAgentEnv):
         self.max_steps = env_config.get("episode_length", 100)
         self.vocab_size = env_config.get("vocab_size", 0)
         self.grid_size = env_config.get("grid", (1, 5))
-        self.scale_rule = env_config.get("scale", None)
         self.window_size = env_config.get("window", (1, 5))
         self.padded_grid_size = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
-        self.empathy = env_config.get("empathy", 1)
-        if not hasattr(self, "total_steps"):
-            self.total_steps = 0
         super().__init__()
         self.channels = 4 + (self.food_types * 3) + (self.vocab_size*num_agents)
         self.agent_food_counts = dict()
@@ -52,27 +48,6 @@ class Trade(MultiAgentEnv):
             np.random.seed(seed)
 
     def reset(self):
-        if not self.scale_rule:
-            new_grid_size = self.grid_size
-        elif self.scale_rule == "random":
-            g_len = randint(1, 15)
-            new_grid_size = (g_len, g_len)
-        # does not work
-        elif self.scale_rule == "increase":
-            g_len = (2*int(self.total_steps / 500_000)) + 1
-            new_grid_size = (g_len, g_len)
-        config = {
-            "food_types": self.food_types,
-            "episode_length": self.max_steps,
-            "vocab_size": self.vocab_size,
-            "window": self.window_size,
-            "num_agents": len(self.agents),
-            "empathy": self.empathy,
-            "grid": new_grid_size,
-            "scale": self.scale_rule,
-        }
-        self.__init__(config)
-
         self.agents = self.possible_agents[:]
         # TODO better starting pos
         gx, gy = self.grid_size
@@ -151,11 +126,6 @@ class Trade(MultiAgentEnv):
         for a in self.agents:
             if not self.compute_done(a):
                 rew += inv_dist(pos, self.agent_positions[a])
-        #for f in self.agent_food_counts[agent]:
-        #    if f >= 0.1:
-        #        rew += 1
-        #    else:
-        #        rew += -1
         return rew
 
     def compute_exchange_amount(self, x: int, y: int, food: int, picker: int):
@@ -192,7 +162,6 @@ class Trade(MultiAgentEnv):
             self.agent_food_counts[agent] = [x - 0.1 for x in self.agent_food_counts[agent]]
 
         self.steps += 1
-        self.total_steps += 1
 
         obs = {agent: self.compute_observation(agent) for agent in actions.keys()}
         dones = {agent: self.compute_done(agent) for agent in actions.keys()}
@@ -242,7 +211,6 @@ class TradeCallback(DefaultCallbacks):
             episode.custom_metrics[f"comm_{symbol}"] = count
         for agent, lifetime in env.lifetimes.items():
             episode.custom_metrics[f"{agent}_lifetime"] = lifetime
-        episode.custom_metrics[f"total_steps"] = env.total_steps
         episode.custom_metrics[f"avg_avg_dist"] = sum(self.agent_dists) / len(self.agent_dists)
         total_number_of_actions = sum(self.action_counts.values())
         if total_number_of_actions > 0:

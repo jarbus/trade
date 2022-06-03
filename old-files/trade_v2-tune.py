@@ -60,11 +60,9 @@ if __name__ == "__main__":
 
     env_config = {"window": (2, 2),
                   "grid": (3, 3),
-                  "empathy": 1,
                   "food_types": num_agents,
                   "num_agents": num_agents,
                   "episode_length": 100,
-                  "scale": None, #increase random or None
                   "vocab_size": 0}
 
     test_env = Trade(env_config)
