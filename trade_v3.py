@@ -262,16 +262,16 @@ class TradeCallback(DefaultCallbacks):
             total_agent_exchange = {"give": 0, "place": 0}
             for other_agent in env.agents:
                 other_agent_exchange = {"give": 0, "take": 0}
-                for food in range(self.food_types):
-                    give = self.player_exchanges[(agent, other_agent, food)]
-                    take = self.player_exchanges[(other_agent, agent, food)]
+                for food in range(env.food_types):
+                    give = env.player_exchanges[(agent, other_agent, food)]
+                    take = env.player_exchanges[(other_agent, agent, food)]
                     other_agent_exchange["give"] += give
                     total_agent_exchange["give"] += give
                     other_agent_exchange["take"] += take
                     total_agent_exchange["take"] += take
-                episode.custom_metrics[f"{agent}_ex_ratio_{other_agent}"] =\
+                episode.custom_metrics[f"{agent}_take_give_ratio_{other_agent}"] =\
                     other_agent_exchange["take"] / max(1, other_agent_exchange["give"])
-            episode.custom_metrics[f"{agent}_ex_ratio_total"] =\
+            episode.custom_metrics[f"{agent}_take_give_ratio_total"] =\
                 total_agent_exchange["take"] / max(1, total_agent_exchange["give"])
             for food in range(env.food_types):
                 episode.custom_metrics[f"{agent}_PICK_{food}"] = env.picked_counts[agent][food]
