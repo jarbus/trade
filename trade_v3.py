@@ -73,6 +73,7 @@ class Trade(MultiAgentEnv):
         self.steps = 0
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
         self.num_exchanges = [0]*self.food_types
+        self.player_exchanges = {(a, b, f): 0 for a in self.agents for b in self.agents for f in range(self.food_types)}
         self.lifetimes = {agent: 0 for agent in self.agents}
         self.agent_food_counts = {"player_0": [1, 1], "player_1": [1, 1], "player_2": [1, 1], "player_3": [1, 1]}
         return {agent: self.compute_observation(agent) for agent in self.agents}
@@ -171,7 +172,11 @@ class Trade(MultiAgentEnv):
                 x, y = self.agent_positions[agent]
                 aid: int = self.agents.index(agent)
                 if pick:
-                    self.num_exchanges[food] += self.compute_exchange_amount(x, y, food, aid)
+                    exchange_amount = self.compute_exchange_amount(x, y, food, aid)
+                    if exchange_amount > 0:
+                        for i, a in enumerate(self.agents):
+                            self.player_exchanges[(i, aid, food)] += self.table[x, y, food, i]
+                    self.num_exchanges[food] += exchange_amount
                     self.picked_counts[agent][food] += self.compute_pick_amount(x, y, food, aid)
                     self.agent_food_counts[agent][food] += np.sum(self.table[x, y, food])
                     self.table[x, y, food, :] = 0
@@ -254,6 +259,20 @@ class TradeCallback(DefaultCallbacks):
             episode.custom_metrics[f"{agent}_lifetime"] = env.lifetimes[agent]
             episode.custom_metrics[f"{agent}_food_imbalance"] = \
                 max(env.agent_food_counts[agent]) / max(1, min(env.agent_food_counts[agent]))
+            total_agent_exchange = {"give": 0, "place": 0}
+            for other_agent in env.agents:
+                other_agent_exchange = {"give": 0, "take": 0}
+                for food in range(self.food_types):
+                    give = self.player_exchanges[(agent, other_agent, food)]
+                    take = self.player_exchanges[(other_agent, agent, food)]
+                    other_agent_exchange["give"] += give
+                    total_agent_exchange["give"] += give
+                    other_agent_exchange["take"] += take
+                    total_agent_exchange["take"] += take
+                episode.custom_metrics[f"{agent}_ex_ratio_{other_agent}"] =\
+                    other_agent_exchange["take"] / max(1, other_agent_exchange["give"])
+            episode.custom_metrics[f"{agent}_ex_ratio_total"] =\
+                total_agent_exchange["take"] / max(1, total_agent_exchange["give"])
             for food in range(env.food_types):
                 episode.custom_metrics[f"{agent}_PICK_{food}"] = env.picked_counts[agent][food]
                 episode.custom_metrics[f"{agent}_PLACE_{food}"] = env.placed_counts[agent][food]
