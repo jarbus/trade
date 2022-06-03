@@ -174,8 +174,8 @@ class Trade(MultiAgentEnv):
                 if pick:
                     exchange_amount = self.compute_exchange_amount(x, y, food, aid)
                     if exchange_amount > 0:
-                        for i, a in enumerate(self.agents):
-                            self.player_exchanges[(i, aid, food)] += self.table[x, y, food, i]
+                        for i, other_agent in enumerate(self.agents):
+                            self.player_exchanges[(other_agent, agent, food)] += self.table[x, y, food, i]
                     self.num_exchanges[food] += exchange_amount
                     self.picked_counts[agent][food] += self.compute_pick_amount(x, y, food, aid)
                     self.agent_food_counts[agent][food] += np.sum(self.table[x, y, food])
@@ -273,8 +273,8 @@ class TradeCallback(DefaultCallbacks):
                 episode.custom_metrics[f"{agent}_give_to_{other_agent}"] = other_agent_exchange["give"]
                 episode.custom_metrics[f"{agent}_take_give_ratio_{other_agent}"] =\
                     other_agent_exchange["take"] / max(0.01, other_agent_exchange["give"])
-                episode.custom_metrics[f"{agent}_take_from_all"] = total_agent_exchange["take"]
-                episode.custom_metrics[f"{agent}_give_to_all"] = total_agent_exchange["give"]
+            episode.custom_metrics[f"{agent}_take_from_all"] = total_agent_exchange["take"]
+            episode.custom_metrics[f"{agent}_give_to_all"] = total_agent_exchange["give"]
             episode.custom_metrics[f"{agent}_take_give_ratio_total"] =\
                 total_agent_exchange["take"] / max(0.01, total_agent_exchange["give"])
             for food in range(env.food_types):
