@@ -8,7 +8,10 @@ import os
 N = 5
 if __name__ == "__main__":
     name = "EXP_NAME"
-    path = f"/home/garbus/trade/serves/{name}/CHECK_NAME"
+    path = f"/home/garbus/trade/serves/{name}"
+    if not os.path.exists(path):
+        os.mkdir(path)
+    path = os.path.join(path, "CHECK_NAME")
     if not os.path.exists(path):
         os.mkdir(path)
     for i in range(0, N):

@@ -7,8 +7,11 @@ import os
 
 N = 5
 if __name__ == "__main__":
-    name = "10_percent_100_percent"
-    path = f"/home/garbus/trade/serves/{name}/"
+    name = "experiment-root"
+    path = f"/home/garbus/trade/serves/{name}"
+    if not os.path.exists(path):
+        os.mkdir(path)
+    path = os.path.join(path, "checkpoint_000010")
     if not os.path.exists(path):
         os.mkdir(path)
     for i in range(0, N):
@@ -85,7 +88,7 @@ if __name__ == "__main__":
 
        # trainer.restore("/work/garbus/ray_results/2d4a/random_food_pos,pbt=100/ReusablePPOTrainer_trade_v3_3e62f_00000_0_lr=0.001_2022-06-01_10-00-52/checkpoint_003500/checkpoint-3500")
 
-        trainer.restore("/work/garbus/ray_results/grouping/10_percent_100_percent/ReusablePPOTrainer_trade_v3_70dc1_00003_3_lr=0.001_2022-06-02_21-57-45/checkpoint_007200/checkpoint-7200")
+        trainer.restore("/work/garbus/ray_results/experiment-root/experiment-root/ReusablePPOTrainer_trade_v3_a1f8e_00000_0_lr=0.001_2022-06-04_10-00-06/checkpoint_000010/checkpoint-10")
         obss = test_env.reset()
         states = {}
         for agent in obss.keys():
