@@ -5,7 +5,7 @@
 
 #SBATCH --mail-type=END
 #SBATCH --mail-user=garbus@brandeis.edu
-#SBATCH --job-name=runs/${JOB_NAME}
+#SBATCH --job-name=${JOB_NAME}
 #SBATCH --output=runs/${JOB_NAME}.log
 #SBATCH --account=guest
 #SBATCH --qos=low-gpu
