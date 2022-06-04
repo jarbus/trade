@@ -259,7 +259,7 @@ class TradeCallback(DefaultCallbacks):
             episode.custom_metrics[f"{agent}_lifetime"] = env.lifetimes[agent]
             episode.custom_metrics[f"{agent}_food_imbalance"] = \
                 max(env.agent_food_counts[agent]) / max(1, min(env.agent_food_counts[agent]))
-            total_agent_exchange = {"give": 0, "place": 0}
+            total_agent_exchange = {"give": 0, "take": 0}
             for other_agent in env.agents:
                 other_agent_exchange = {"give": 0, "take": 0}
                 for food in range(env.food_types):
