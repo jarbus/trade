@@ -16,4 +16,4 @@ source /home/garbus/.bashrc
 conda activate trade
 
 # ===== Call your code below =====
-python trade_v3-serve.py
+python serve.py

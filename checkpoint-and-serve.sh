@@ -7,6 +7,6 @@ if [[ -f $(cat /tmp/ranger-select.txt) ]]; then
     sed -e "s/CHECKPOINT_PATH/$file/"\
         -e "s/EXP_NAME/$exp/"\
         -e "s/CHECK_NAME/$check/"\
-        trade_v3-serve-template.py > trade_v3-serve.py
+        template-serve.py > serve.py
     sbatch serve.sh
 fi
