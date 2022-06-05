@@ -57,7 +57,7 @@ if __name__ == "__main__":
     register_env(env_name, lambda config: Trade(config))
 
     env_config, policies = generate_configs()
-    batch_size = 100
+    batch_size = 1000
 
     tune.run(
         ReusablePPOTrainer,
@@ -66,8 +66,8 @@ if __name__ == "__main__":
         metric="episode_reward_mean",
         mode="max",
         resume=False,
-        num_samples=1,
-        stop={"timesteps_total": 1000},
+        num_samples=16,
+        stop={"timesteps_total": 10_000_000},
         checkpoint_freq=10,
         reuse_actors=True,
         #local_dir="~/ray_results/"+env_name,
