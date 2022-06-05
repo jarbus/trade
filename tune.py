@@ -5,7 +5,6 @@ from ray.rllib.agents import ppo
 from ray.tune.registry import register_env
 from ray.rllib.policy.policy import PolicySpec
 from trade_v3 import Trade, TradeCallback
-from trade_v3_config import generate_configs
 from ray.tune.schedulers import PopulationBasedTraining
 import random
 import argparse
