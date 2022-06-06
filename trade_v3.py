@@ -25,6 +25,7 @@ class Trade(MultiAgentEnv):
         self.dist_coeff = env_config.get("dist_coeff", 0.5)
         self.move_coeff = env_config.get("move_coeff", 0.5)
         self.death_prob = env_config.get("death_prob", 0.1)
+        self.random_start = env_config.get("random_start", True)
         self.padded_grid_size = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
         super().__init__()
         # x, y + agent poses + agent food counts + food grid + comms
@@ -66,7 +67,9 @@ class Trade(MultiAgentEnv):
         self.spawn_spots = [[(0,1), (0, 1)], [(0,1), (gy-2,gy-1)], [(gx-2,gx-1), (0,1)], [(gx-2,gx-1), (gy-2,gy-1)]]
         self.spawn_spots = [two_combos(xs, ys) for (xs, ys) in self.spawn_spots]
         food_counts = [(0, 10), (0, 10), (1, 10), (1, 10)]
-        shuffle(food_counts)
+        if self.random_start:
+            shuffle(food_counts)
+            shuffle(self.spawn_spots)
         for spawn_spot, (ft, fc) in zip(self.spawn_spots, food_counts):
             fx, fy = choice(spawn_spot)
             self.table[fx, fy, ft, len(self.agents)] = fc

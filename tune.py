@@ -27,6 +27,7 @@ def generate_configs():
                   "move_coeff": 0.0,
                   "dist_coeff": 1.0,
                   "death_prob": 0.1,
+                  "random_start": True,
                   "vocab_size": 0}
 
     test_env = Trade(env_config)
