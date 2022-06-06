@@ -103,6 +103,8 @@ class Trade(MultiAgentEnv):
         self_frame = np.zeros(self.grid_size, dtype=np.float32)
         self_frame[ax, ay] = 1
         for a in self.agents:
+            if self.compute_done(a):
+                continue
             oax, oay = self.agent_positions[a]
             comm_frames[:, oax, oay] = self.communications[a]
             if a != agent:
