@@ -269,14 +269,14 @@ class TradeCallback(DefaultCallbacks):
                     total_agent_exchange["give"] += give
                     other_agent_exchange["take"] += take
                     total_agent_exchange["take"] += take
-                episode.custom_metrics[f"{agent}_take_from_{other_agent}"] = other_agent_exchange["take"]
-                episode.custom_metrics[f"{agent}_give_to_{other_agent}"] = other_agent_exchange["give"]
-                episode.custom_metrics[f"{agent}_take_give_ratio_{other_agent}"] =\
-                    other_agent_exchange["take"] / max(0.01, other_agent_exchange["give"])
-            episode.custom_metrics[f"{agent}_take_from_all"] = total_agent_exchange["take"]
-            episode.custom_metrics[f"{agent}_give_to_all"] = total_agent_exchange["give"]
-            episode.custom_metrics[f"{agent}_take_give_ratio_total"] =\
-                total_agent_exchange["take"] / max(0.01, total_agent_exchange["give"])
+                #episode.custom_metrics[f"{agent}_take_from_{other_agent}"] = other_agent_exchange["take"]
+                #episode.custom_metrics[f"{agent}_give_to_{other_agent}"] = other_agent_exchange["give"]
+                episode.custom_metrics[f"{agent}_mut_exchange_{other_agent}"] =\
+                   min(other_agent_exchange["take"], other_agent_exchange["give"])
+            #episode.custom_metrics[f"{agent}_take_from_all"] = total_agent_exchange["take"]
+            #episode.custom_metrics[f"{agent}_give_to_all"] = total_agent_exchange["give"]
+            episode.custom_metrics[f"{agent}_mut_exchange_total"] =\
+                min(total_agent_exchange["take"], total_agent_exchange["give"])
             for food in range(env.food_types):
                 episode.custom_metrics[f"{agent}_PICK_{food}"] = env.picked_counts[agent][food]
                 episode.custom_metrics[f"{agent}_PLACE_{food}"] = env.placed_counts[agent][food]
