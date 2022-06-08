@@ -129,7 +129,7 @@ if __name__ == "__main__":
             "num_workers": 0,
             "num_cpus_for_driver": 1,
             "num_envs_per_worker": 20,
-            "batch_mode": 'complete_episodes',
+            "batch_mode": 'truncate_episodes',
             "lambda": 0.95,
             "gamma": .99,
             "clip_param": 0.1,
