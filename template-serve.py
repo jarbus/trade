@@ -8,13 +8,11 @@ import os
 
 N = 20
 if __name__ == "__main__":
-    name = "EXP_NAME"
-    path = f"/home/garbus/trade/serves/{name}"
-    if not os.path.exists(path):
-        os.mkdir(path)
-    path = os.path.join(path, "CHECK_NAME")
-    if not os.path.exists(path):
-        os.mkdir(path)
+    path = f"/home/garbus/trade/serves"
+    for name in ["CLASS_NAME", "EXP_NAME", "CHECK_NAME"]:
+        path = os.path.join(path, name)
+        if not os.path.exists(path):
+            os.mkdir(path)
     for i in range(0, N):
         f = open(os.path.join(path, f"{i}.out"), "w")
 
