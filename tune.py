@@ -77,7 +77,7 @@ class ReusablePPOTrainer(ppo.PPOTrainer):
 
 pbt = PopulationBasedTraining(
     time_attr="time_total_s",
-    perturbation_interval=400_000_000_000_000,
+    perturbation_interval=500,
     resample_probability=0.25,
     # Specifies the mutations of these hyperparams
     hyperparam_mutations={
@@ -102,21 +102,21 @@ if __name__ == "__main__":
     register_env(env_name, lambda config: Trade(config))
 
     env_config, policies = generate_configs()
-    batch_size = 10
+    batch_size = 1000
 
     tune.run(
         ReusablePPOTrainer,
-        name=f"experiment-root",
+        name=f"random-starts",
         scheduler=pbt,
         metric="episode_reward_mean",
         mode="max",
         resume=False,
-        num_samples=1,
-        stop={"timesteps_total": 100},
-        checkpoint_freq=1,
+        num_samples=16,
+        stop={"timesteps_total": 10_000_000},
+        checkpoint_freq=500,
         reuse_actors=True,
         #local_dir="~/ray_results/"+env_name,
-        local_dir="/work/garbus/ray_results/experiment-root",
+        local_dir="/work/garbus/ray_results/2-only",
         config={
             # Environment specific
             "env": env_name,

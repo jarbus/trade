@@ -137,14 +137,15 @@ class Trade(MultiAgentEnv):
             return rew
         pos = self.agent_positions[agent]
         same_poses = 0
-        dists = [0]
+        dists = [0, 0]
         for a in self.agents:
             if not self.compute_done(a) and a != agent:
                 #rew += self.dist_coeff * inv_dist(pos, self.agent_positions[a])
                 dists.append(inv_dist(pos, self.agent_positions[a]))
                 #if self.agent_positions[a] == pos:
                 #    same_poses += 1
-        rew = 1 + (self.dist_coeff * max(dists))
+        dists.sort()
+        rew = 1 + (self.dist_coeff * dists[-1]) - (self.dist_coeff * dists[-2])
         rew -= self.move_coeff * int(self.moved_last_turn[agent])
         #if same_poses > 2:
         #    rew -= same_poses
