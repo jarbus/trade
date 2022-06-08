@@ -271,7 +271,7 @@ class TradeCallback(DefaultCallbacks):
                     take = env.player_exchanges[(other_agent, agent, food)]
                     other_agent_exchange["give"] += give
                     other_agent_exchange["take"] += take
-                    if other_agent != agent
+                    if other_agent != agent:
                         total_agent_exchange["give"] += give
                         total_agent_exchange["take"] += take
                 #episode.custom_metrics[f"{agent}_take_from_{other_agent}"] = other_agent_exchange["take"]
