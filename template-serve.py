@@ -6,7 +6,7 @@ from trade_v3 import Trade
 from tune import generate_configs
 import os
 
-N = 5
+N = 20
 if __name__ == "__main__":
     name = "EXP_NAME"
     path = f"/home/garbus/trade/serves/{name}"
@@ -52,6 +52,7 @@ if __name__ == "__main__":
 
         trainer.restore("CHECKPOINT_PATH")
         obss = test_env.reset()
+        exchanges = test_env.player_exchanges.copy()
         states = {}
         for agent in obss.keys():
             policy = trainer.get_policy(agent)
@@ -66,6 +67,12 @@ if __name__ == "__main__":
                 actions[agent], states[agent], logits = policy.compute_single_action(obs=np.array(obss[agent]), state=states[agent], policy_id=agent)
 
             obss, rews, dones, infos = test_env.step({agent: action for agent, action in actions.items() if not test_env.compute_done(agent)})
+            for key in test_env.player_exchanges:
+                if test_env.player_exchanges[key] > exchanges[key]:
+                    giver, taker, food_type = key
+                    amount = test_env.player_exchanges[key] - exchanges[key]
+                    f.write(f"Exchange: {giver} gave {amount} of food {food_type} to {taker}\n")
+            exchanges = test_env.player_exchanges.copy()
             if dones["__all__"]:
                 f.write("--------FINAL-STEP--------\n")
                 test_env.render(out=f)
