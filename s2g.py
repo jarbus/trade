@@ -36,7 +36,7 @@ player_colors = ["b", "g", "y", "r"]
 offv = 0.01
 player_offsets = (0, offv), (offv, 0), (0, -offv), (-offv, 0)
 food_offsets = (offv, offv), (-offv, -offv)
-grid_offset = (0.1, 0.1)
+grid_offset = (0.05, 0.15)
 def add_tuple(a, b):
     return tuple(i + j for i, j in zip(a, b))
 
@@ -46,7 +46,7 @@ def plot_step(step: Step):
     vs = 0.6
     hs = 0.6
     #axes.append(fig.add_axes([x, y, w, h]))
-    grid = fig.add_axes([0, 0, vs, 1.0])
+    grid = fig.add_axes([0.05, 0.15, vs - 0.1, 0.7])
     player_info = fig.add_axes([vs, hs, 1-vs, 1-hs])
     exchange_info = fig.add_axes([vs, 0, 1-vs, hs])
 
@@ -58,7 +58,7 @@ def plot_step(step: Step):
     scale = len(step.food_grid[0])
     fig.text(vs + 0.05, 1-0.05, "Player          fc0     fc1   done")
     fig.text(vs + 0.05, 1-0.07, "-----------------------------------------")
-    for i, message in enumerate(all_exchange_messages[-20:]):
+    for i, message in enumerate(all_exchange_messages[-18:]):
         fig.text(vs + 0.02, hs-((i+1)*0.03), f"{message}", fontsize=8, wrap=True)
     for f, fg in enumerate(step.food_grid):
         for row, frow in enumerate(fg):
@@ -72,11 +72,15 @@ def plot_step(step: Step):
                 circ = plt.Circle(f_pos, radius=0.02*fcount/scale, color=color, fill=True)
                 grid.add_patch(circ)
     for i, player in enumerate(step.players):
-        fig.text(vs + 0.05, 1-((i+2)*0.05), f"{player}", fontsize=10, wrap=True, family="monospace", color=player_colors[i])
+        color = player_colors[i] if not player.done else "lightgrey"
+        fig.text(vs + 0.05, 1-((i+2)*0.05), f"{player}", fontsize=10, wrap=True, family="monospace", color=color)
         p_pos = tuple(p / scale for p in player.pos)
         p_pos = add_tuple(p_pos, player_offsets[i])
         p_pos = add_tuple(p_pos, grid_offset)
-        circ = plt.Circle(p_pos, radius=0.02, color=player_colors[i], fill=True)
+        radius = 0.02
+        circ = plt.Circle(p_pos, radius=radius, color=color, fill=True)
+        if player.done:
+            grid.text(*add_tuple(p_pos, (-radius/1.5, -radius/1.5)), f"{i}", fontsize=10, wrap=True, family="monospace")
         grid.add_patch(circ)
 
 
@@ -95,7 +99,7 @@ for i in range(len(steps)-1):
 frames = []
 
 num_steps = len(step_slices)
-# num_steps = 5  # len(step_slices)
+# num_steps = 1  # len(step_slices)
 for i in range(num_steps):
     step = Step(i, [], [], [])
     food = 0
