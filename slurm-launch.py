@@ -12,6 +12,7 @@ from pathlib import Path
 
 template_file = "/home/garbus/trade/slurm-template.sh"
 JOB_NAME = "${JOB_NAME}"
+RUN_NAME = "${RUN_NAME}"
 NUM_NODES = "${NUM_NODES}"
 NUM_GPUS_PER_NODE = "${NUM_GPUS_PER_NODE}"
 PARTITION_OPTION = "${PARTITION_OPTION}"
@@ -72,6 +73,9 @@ if __name__ == "__main__":
         job_name = "{}_{}".format(
             args.exp_name, time.strftime("%m%d-%H%M", time.localtime())
             )
+        run_name = "{}_{}".format(
+            time.strftime("%m%d-%H%M", time.localtime()), args.exp_name
+            )
 
         partition_option = (
             "#SBATCH --partition={}".format(args.partition) if args.partition else ""
@@ -81,6 +85,7 @@ if __name__ == "__main__":
     with open(template_file, "r") as f:
         text = f.read()
         text = text.replace(JOB_NAME, job_name)
+        text = text.replace(RUN_NAME, run_name)
         text = text.replace(NUM_NODES, str(args.num_nodes))
         text = text.replace(NUM_GPUS_PER_NODE, str(args.num_gpus))
         text = text.replace(PARTITION_OPTION, partition_option)
@@ -94,7 +99,7 @@ if __name__ == "__main__":
             )
 
     # ===== Save the script =====
-    script_file = "runs/{}.sh".format(job_name)
+    script_file = "runs/{}.sh".format(run_name)
     with open(script_file, "w") as f:
         f.write(text)
 
@@ -102,5 +107,5 @@ if __name__ == "__main__":
     print("Starting to submit job!")
     subprocess.Popen(["sbatch", script_file])
     print("Job submitted! Script file is at: <{}>. Log file is at: <{}>".format(
-        script_file, "{}.log".format(job_name)))
+        script_file, "{}.log".format(run_name)))
     sys.exit(0)
