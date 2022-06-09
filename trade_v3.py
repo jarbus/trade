@@ -16,6 +16,7 @@ class Trade(MultiAgentEnv):
     action_space = Discrete(2)
 
     def __init__(self, env_config):
+        print(f"Creating Trade environment {env_config}")
         self.food_types = env_config.get("food_types", 2)
         num_agents = env_config.get("num_agents", 2)
         self.max_steps = env_config.get("episode_length", 100)
@@ -25,6 +26,7 @@ class Trade(MultiAgentEnv):
         self.dist_coeff = env_config.get("dist_coeff", 0.5)
         self.move_coeff = env_config.get("move_coeff", 0.5)
         self.death_prob = env_config.get("death_prob", 0.1)
+        self.respawn = env_config.get("respawn", True)
         self.random_start = env_config.get("random_start", True)
         self.padded_grid_size = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
         super().__init__()
@@ -66,7 +68,8 @@ class Trade(MultiAgentEnv):
         # Usage: random.choice(self.spawn_spots[0-4])
         self.spawn_spots = [[(0,1), (0, 1)], [(0,1), (gy-2,gy-1)], [(gx-2,gx-1), (0,1)], [(gx-2,gx-1), (gy-2,gy-1)]]
         self.spawn_spots = [two_combos(xs, ys) for (xs, ys) in self.spawn_spots]
-        food_counts = [(0, 10), (0, 10), (1, 10), (1, 10)]
+        fc = 4 if self.respawn else 10
+        food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
         if self.random_start:
             shuffle(food_counts)
             shuffle(self.spawn_spots)
@@ -145,7 +148,7 @@ class Trade(MultiAgentEnv):
                 #if self.agent_positions[a] == pos:
                 #    same_poses += 1
         dists.sort()
-        rew = 1 + (self.dist_coeff * dists[-1]) - (self.dist_coeff * dists[-2])
+        rew = 1 + (self.dist_coeff * dists[-1]) - (self.dist_coeff * dists[-2] / 2)
         rew -= self.move_coeff * int(self.moved_last_turn[agent])
         #if same_poses > 2:
         #    rew -= same_poses
@@ -208,6 +211,12 @@ class Trade(MultiAgentEnv):
 
         # RESET FOOD EVERY TEN ITERS
         self.steps += 1
+        if self.respawn and self.steps % 15 == 0:
+            fc = 4 if self.respawn else 10
+            food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
+            for spawn_spot, (ft, fc) in zip(self.spawn_spots, food_counts):
+                fx, fy = choice(spawn_spot)
+                self.table[fx, fy, ft, len(self.agents)] = fc
         #if self.steps == 30:
         #    self.table[0, 0, 0, len(self.agents)] = 10
         #    self.table[4, 4, 1, len(self.agents)] = 10

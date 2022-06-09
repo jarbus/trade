@@ -13,6 +13,7 @@ parser = argparse.ArgumentParser(description='Execute Trading Environment.')
 parser.add_argument('--ip', type=str)
 parser.add_argument('--batch-size', type=int)
 parser.add_argument('--random-start', action="store_true")
+parser.add_argument('--respawn', action="store_true")
 args = parser.parse_args()
 
 
@@ -30,6 +31,7 @@ def generate_configs():
                   "dist_coeff": 1.0,
                   "death_prob": 0.1,
                   "random_start": args.random_start,
+                  "respawn": args.respawn,
                   "vocab_size": 0}
 
     test_env = Trade(env_config)
