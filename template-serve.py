@@ -24,6 +24,10 @@ if __name__ == "__main__":
 
 
         env_config, policies = generate_configs()
+        env_config["respawn"] = False
+        env_config["random_start"] = False
+        env_config["vocab_size"] = 0
+        env_config["survival_bonus"] = 0
         test_env = Trade(env_config)
 
         trainer = ppo.PPOTrainer(
@@ -33,14 +37,14 @@ if __name__ == "__main__":
                 "env_config": env_config,
                 # General
                 "framework": "torch",
-                "num_gpus": 0,
+                "num_gpus": 1,
                 "explore": False,
                 "sgd_minibatch_size": 64,
                 "num_workers": 1,
                 # Method specific
                 "multiagent": {
                     "policies": policies,
-                    "policy_mapping_fn": (lambda aid, **kwargs: aid),
+                    "policy_mapping_fn": (lambda aid, **kwargs: "pol1"),
                 },
 
             },
@@ -53,7 +57,7 @@ if __name__ == "__main__":
         exchanges = test_env.player_exchanges.copy()
         states = {}
         for agent in obss.keys():
-            policy = trainer.get_policy(agent)
+            policy = trainer.get_policy("pol1")
             states[agent] = policy.get_initial_state()
 
         for i in range(100):
@@ -61,7 +65,7 @@ if __name__ == "__main__":
             test_env.render(out=f)
             actions = {}
             for agent in obss.keys():
-                policy = trainer.get_policy(agent)
+                policy = trainer.get_policy("pol1")
                 actions[agent], states[agent], logits = policy.compute_single_action(obs=np.array(obss[agent]), state=states[agent], policy_id=agent)
 
             obss, rews, dones, infos = test_env.step({agent: action for agent, action in actions.items() if not test_env.compute_done(agent)})
