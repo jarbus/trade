@@ -15,6 +15,7 @@
 #SBATCH --gres=gpu:TitanX:8
 #SBATCH --nodes=2
 #SBATCH --exclusive
+#SBATCH --exclude=gpu-6-9
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem-per-cpu=1GB
