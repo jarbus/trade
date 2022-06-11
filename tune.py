@@ -55,8 +55,8 @@ def generate_configs():
         return PolicySpec(None, obs_space, act_space, config)
 
     # policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
-    # policy = gen_policy(0)
-    policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
+    policy = gen_policy(0)
+    policies = {f"pol1": policy } #for a in range(num_agents)}
     return env_config, policies 
 
 
