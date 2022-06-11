@@ -147,5 +147,5 @@ if __name__ == "__main__":
             # Method specific
             "multiagent": {
                 "policies": policies,
-                "policy_mapping_fn": (lambda aid, **kwargs: aid),
+                "policy_mapping_fn": (lambda aid, **kwargs: "pol1"),
             }})
