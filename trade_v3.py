@@ -26,6 +26,7 @@ class Trade(MultiAgentEnv):
         self.dist_coeff = env_config.get("dist_coeff", 0.5)
         self.move_coeff = env_config.get("move_coeff", 0.5)
         self.death_prob = env_config.get("death_prob", 0.1)
+        self.survival_bonus = env_config.get("survival_bonus", 0.0)
         self.respawn = env_config.get("respawn", True)
         self.random_start = env_config.get("random_start", True)
         self.padded_grid_size = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
@@ -141,14 +142,16 @@ class Trade(MultiAgentEnv):
         pos = self.agent_positions[agent]
         same_poses = 0
         dists = [0, 0]
+        other_survival_bonus = 0
         for a in self.agents:
             if not self.compute_done(a) and a != agent:
                 #rew += self.dist_coeff * inv_dist(pos, self.agent_positions[a])
                 dists.append(inv_dist(pos, self.agent_positions[a]))
+                other_survival_bonus += self.survival_bonus
                 #if self.agent_positions[a] == pos:
                 #    same_poses += 1
         dists.sort()
-        rew = 1 + (self.dist_coeff * dists[-1]) - (self.dist_coeff * dists[-2] / 2)
+        rew = 1 + (self.dist_coeff * dists[-1]) + other_survival_bonus
         rew -= self.move_coeff * int(self.moved_last_turn[agent])
         #if same_poses > 2:
         #    rew -= same_poses

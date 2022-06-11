@@ -32,7 +32,8 @@ def generate_configs():
                   "death_prob": 0.1,
                   "random_start": args.random_start,
                   "respawn": args.respawn,
-                  "vocab_size": 0}
+                  "survival_bonus": 1,
+                  "vocab_size": 10}
 
     test_env = Trade(env_config)
     obs_space = test_env.observation_space
