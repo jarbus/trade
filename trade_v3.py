@@ -132,7 +132,13 @@ class Trade(MultiAgentEnv):
                     self_food_frames[f, oax, oay] += self.agent_food_counts[a][f]
         xpos_frame = np.repeat(np.arange(gy).reshape(1, gy), gx, axis=0) / gx
         ypos_frame = np.repeat(np.arange(gx).reshape(gx, 1), gy, axis=1) / gy
-        frames = np.stack([*food_frames, *self_food_frames, np.sum(self.punish_frames, axis=0),  *other_food_frames, *comm_frames, other_frame, self_frame, xpos_frame, ypos_frame])
+
+        if self.punish:
+            pun_frames = np.sum(self.punish_frames, axis=0)[None, :, :]
+        else:
+            pun_frames = np.zeros((0, *self.grid_size), dtype=np.float32)
+
+        frames = np.stack([*food_frames, *self_food_frames, *pun_frames,  *other_food_frames, *comm_frames, other_frame, self_frame, xpos_frame, ypos_frame])
         padded_frames = np.full((frames.shape[0], *self.padded_grid_size), -1, dtype=np.float32)
         padded_frames[:, wx:(gx+wx), wy:(gy+wy)] = frames
         obs = padded_frames[:, minx:maxx, miny:maxy] / 30
@@ -183,7 +189,7 @@ class Trade(MultiAgentEnv):
         random_order = list(actions.keys())
         shuffle(random_order)
         # placed goods will not be available until next turn
-        place_table = np.zeros(self.table.shape, dtype=np.float32)
+        #place_table = np.zeros(self.table.shape, dtype=np.float32)
         gx, gy = self.grid_size
         for agent in random_order:
             action = actions[agent]
@@ -215,7 +221,7 @@ class Trade(MultiAgentEnv):
                 elif self.agent_food_counts[agent][food] >= PLACE_AMOUNT:
                     actual_place_amount = PLACE_AMOUNT
                     self.agent_food_counts[agent][food] -= actual_place_amount
-                    place_table[x, y, food, aid] += actual_place_amount
+                    self.table[x, y, food, aid] += actual_place_amount
                     self.placed_counts[agent][food] += actual_place_amount
             # last action is noop
             elif action in range(4 + self.food_types * 2 + int(self.punish), self.num_actions-1):
@@ -235,7 +241,7 @@ class Trade(MultiAgentEnv):
                         self.dones[agent] = True
 
         # Once agents complete all actions, add placed food to table
-        self.table = self.table + place_table
+        #self.table = self.table + place_table
         # RESET FOOD EVERY TEN ITERS
         self.steps += 1
         if self.respawn and self.steps % 15 == 0:

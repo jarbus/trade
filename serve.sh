@@ -16,4 +16,4 @@ source /home/garbus/.bashrc
 conda activate trade
 
 # ===== Call your code below =====
-python serve.py
+python serve.py --punish --random-start

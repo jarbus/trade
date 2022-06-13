@@ -23,7 +23,7 @@ def generate_configs():
                   "num_agents": num_agents,
                   "episode_length": 200,
                   "move_coeff": 0.0,
-                  "dist_coeff": 1,
+                  "dist_coeff": args.dist_coeff,
                   "death_prob": 0.1,
                   "random_start": args.random_start,
                   "respawn": args.respawn,
@@ -45,6 +45,7 @@ def generate_configs():
                 "post_fcnet_hiddens": [64, 64],
                 "post_fcnet_activation": "relu",
                 "use_lstm": True,
+                "lstm_use_prev_action": True,
                 "max_seq_len": 20,
             },
             "gamma": 0.99,
@@ -101,11 +102,11 @@ if __name__ == "__main__":
     register_env(env_name, lambda config: Trade(config))
 
     env_config, policies = generate_configs()
-    batch_size = 500
+    batch_size = args.batch_size
 
     tune.run(
         ReusablePPOTrainer,
-        name=f"punish=True-nors",
+        name=f"recreate-bs1000-punish=False-nors-lstm_prev_a",
         scheduler=pbt,
         metric="episode_reward_mean",
         mode="max",
