@@ -1,5 +1,6 @@
 import torch
 import ray
+from args import get_args
 from ray import tune
 from ray.rllib.agents import ppo
 from ray.tune.registry import register_env
@@ -7,16 +8,10 @@ from ray.rllib.policy.policy import PolicySpec
 from trade_v3 import Trade, TradeCallback
 from ray.tune.schedulers import PopulationBasedTraining
 import random
-import argparse
-
-parser = argparse.ArgumentParser(description='Execute Trading Environment.')
-parser.add_argument('--ip', type=str)
-parser.add_argument('--batch-size', type=int)
-parser.add_argument('--random-start', action="store_true")
-parser.add_argument('--respawn', action="store_true")
-args = parser.parse_args()
 
 
+
+args = get_args()
 
 def generate_configs():
     num_agents = 4
@@ -28,12 +23,14 @@ def generate_configs():
                   "num_agents": num_agents,
                   "episode_length": 200,
                   "move_coeff": 0.0,
-                  "dist_coeff": 1.0,
+                  "dist_coeff": 1,
                   "death_prob": 0.1,
                   "random_start": args.random_start,
                   "respawn": args.respawn,
                   "survival_bonus": 1,
-                  "vocab_size": 10}
+                  "punish": args.punish,
+                  "punish_coeff": 2,
+                  "vocab_size": 0}
 
     test_env = Trade(env_config)
     obs_space = test_env.observation_space
@@ -48,7 +45,7 @@ def generate_configs():
                 "post_fcnet_hiddens": [64, 64],
                 "post_fcnet_activation": "relu",
                 "use_lstm": True,
-                "max_seq_len": 200,
+                "max_seq_len": 20,
             },
             "gamma": 0.99,
         }
@@ -57,7 +54,7 @@ def generate_configs():
     # policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
     policy = gen_policy(0)
     policies = {f"pol1": policy } #for a in range(num_agents)}
-    return env_config, policies 
+    return env_config, policies
 
 
 
@@ -80,7 +77,7 @@ class ReusablePPOTrainer(ppo.PPOTrainer):
 
 pbt = PopulationBasedTraining(
     time_attr="time_total_s",
-    perturbation_interval=500,
+    perturbation_interval=50_000_000_000_000,
     resample_probability=0.25,
     # Specifies the mutations of these hyperparams
     hyperparam_mutations={
@@ -89,7 +86,6 @@ pbt = PopulationBasedTraining(
         "entropy_coeff": lambda: random.uniform(0.01, 0.2),
         "lr": [1e-3, 5e-4, 1e-4, 5e-5, 1e-5],
         "num_sgd_iter": lambda: random.randint(1, 10),
-        "train_batch_size": [1000, 2000, 4000],
     },
     custom_explore_fn=explore,
 )
@@ -105,11 +101,11 @@ if __name__ == "__main__":
     register_env(env_name, lambda config: Trade(config))
 
     env_config, policies = generate_configs()
-    batch_size = 1000
+    batch_size = 500
 
     tune.run(
         ReusablePPOTrainer,
-        name=f"random-starts",
+        name=f"punish=True-nors",
         scheduler=pbt,
         metric="episode_reward_mean",
         mode="max",
@@ -119,19 +115,20 @@ if __name__ == "__main__":
         checkpoint_freq=500,
         reuse_actors=True,
         #local_dir="~/ray_results/"+env_name,
-        local_dir="/work/garbus/ray_results/2-only",
+        local_dir="/work/garbus/ray_results/punish",
         config={
             # Environment specific
             "env": env_name,
             "env_config": env_config,
             "callbacks": TradeCallback,
+            "recreate_failed_workers": True,
             # General
             "log_level": "ERROR",
             "framework": "torch",
             "num_gpus": 1,
             "num_workers": 0,
             "num_cpus_for_driver": 1,
-            "num_envs_per_worker": 20,
+            "num_envs_per_worker": 10,
             "batch_mode": 'truncate_episodes',
             "lambda": 0.95,
             "gamma": .99,
@@ -142,8 +139,8 @@ if __name__ == "__main__":
             "num_sgd_iter": 5,
             "sgd_minibatch_size": batch_size,
             "train_batch_size": batch_size,
-            'rollout_fragment_length': 100,
-            'lr': tune.choice([1e-03]),
+            'rollout_fragment_length': 50,
+            'lr': tune.choice([1e-04, 1e-05]),
             # Method specific
             "multiagent": {
                 "policies": policies,

@@ -4,9 +4,10 @@ import numpy as np
 from random import randint, random, shuffle, choice
 from math import floor
 from ray.rllib.agents.callbacks import DefaultCallbacks
-from utils import add_tup, directions, valid_pos, inv_dist, two_combos
+from utils import add_tup, directions, valid_pos, inv_dist, two_combos, punish_region
 from pdb import set_trace as T
 import sys
+from time import time
 
 NUM_ITERS = 100
 PLACE_AMOUNT = 0.5
@@ -26,15 +27,19 @@ class Trade(MultiAgentEnv):
         self.dist_coeff = env_config.get("dist_coeff", 0.5)
         self.move_coeff = env_config.get("move_coeff", 0.5)
         self.death_prob = env_config.get("death_prob", 0.1)
+        self.punish = env_config.get("punish", True)
+        self.punish_coeff = env_config.get("punish_coeff", 3)
         self.survival_bonus = env_config.get("survival_bonus", 0.0)
         self.respawn = env_config.get("respawn", True)
         self.random_start = env_config.get("random_start", True)
         self.padded_grid_size = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
         super().__init__()
         # x, y + self, other + selffc, otherfc + food frames + comms
-        self.channels = 2 + 2 + (2*self.food_types) + (self.food_types) + (self.vocab_size)
+        self.channels = 2 + 2 + (2*self.food_types) + (self.food_types) + (self.vocab_size) + int(self.punish)
         self.agent_food_counts = dict()
         self.MOVES = ["UP", "DOWN", "LEFT", "RIGHT"]
+        if self.punish:
+            self.MOVES.append("PUNISH")
         for f in range(self.food_types):
             self.MOVES.extend([f"PICK_{f}", f"PLACE_{f}"])
         self.MOVES.extend([f"COMM_{c}" for c in range(self.vocab_size)])
@@ -66,6 +71,7 @@ class Trade(MultiAgentEnv):
         # use the last slot in the agents dimension to specify naturally spawning food
         self.table = np.zeros((*self.grid_size, self.food_types, len(self.agents)+1), dtype=np.float32)
 
+        self.punish_frames = np.zeros((len(self.agents), *self.grid_size))
         # Usage: random.choice(self.spawn_spots[0-4])
         self.spawn_spots = [[(0,1), (0, 1)], [(0,1), (gy-2,gy-1)], [(gx-2,gx-1), (0,1)], [(gx-2,gx-1), (gy-2,gy-1)]]
         self.spawn_spots = [two_combos(xs, ys) for (xs, ys) in self.spawn_spots]
@@ -126,7 +132,7 @@ class Trade(MultiAgentEnv):
                     self_food_frames[f, oax, oay] += self.agent_food_counts[a][f]
         xpos_frame = np.repeat(np.arange(gy).reshape(1, gy), gx, axis=0) / gx
         ypos_frame = np.repeat(np.arange(gx).reshape(gx, 1), gy, axis=1) / gy
-        frames = np.stack([*food_frames, *self_food_frames, *other_food_frames, *comm_frames, other_frame, self_frame, xpos_frame, ypos_frame])
+        frames = np.stack([*food_frames, *self_food_frames, np.sum(self.punish_frames, axis=0),  *other_food_frames, *comm_frames, other_frame, self_frame, xpos_frame, ypos_frame])
         padded_frames = np.full((frames.shape[0], *self.padded_grid_size), -1, dtype=np.float32)
         padded_frames[:, wx:(gx+wx), wy:(gy+wy)] = frames
         obs = padded_frames[:, minx:maxx, miny:maxy] / 30
@@ -144,18 +150,21 @@ class Trade(MultiAgentEnv):
         if self.compute_done(agent):
             return rew
         pos = self.agent_positions[agent]
-        same_poses = 0
+        # same_poses = 0
         dists = [0, 0]
         other_survival_bonus = 0
-        for a in self.agents:
+        punishment = 0
+        for aid, a in enumerate(self.agents):
             if not self.compute_done(a) and a != agent:
                 #rew += self.dist_coeff * inv_dist(pos, self.agent_positions[a])
                 dists.append(inv_dist(pos, self.agent_positions[a]))
                 other_survival_bonus += self.survival_bonus
+                punishment += self.punish_frames[aid, pos[0], pos[1]]
                 #if self.agent_positions[a] == pos:
                 #    same_poses += 1
         dists.sort()
         rew = 1 + (self.dist_coeff * dists[-1]) + other_survival_bonus
+        rew -= self.punish_coeff * punishment
         rew -= self.move_coeff * int(self.moved_last_turn[agent])
         #if same_poses > 2:
         #    rew -= same_poses
@@ -170,24 +179,30 @@ class Trade(MultiAgentEnv):
     def step(self, actions):
         # all agents execute their action
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
+        self.punish_frames = np.zeros((len(self.agents), *self.grid_size))
         random_order = list(actions.keys())
         shuffle(random_order)
         # placed goods will not be available until next turn
         place_table = np.zeros(self.table.shape, dtype=np.float32)
+        gx, gy = self.grid_size
         for agent in random_order:
             action = actions[agent]
             # MOVEMENT
             self.moved_last_turn[agent] = False
+            x, y = self.agent_positions[agent]
+            aid: int = self.agents.index(agent)
             if action in range(0, ndir):
                 new_pos = add_tup(self.agent_positions[agent], directions[action])
                 if valid_pos(new_pos, self.grid_size):
                     self.agent_positions[agent] = new_pos
                     self.moved_last_turn[agent] = True
-            elif action in range(ndir, ndir + self.food_types * 2):
-                pick = ((action - ndir) % 2 == 0)
-                food = floor((action - ndir) / 2)
-                x, y = self.agent_positions[agent]
-                aid: int = self.agents.index(agent)
+            # punish
+            elif action in range(ndir, ndir + int(self.punish)):
+                x_pun_region, y_pun_region = punish_region(x, y, *self.grid_size)
+                self.punish_frames[aid, x_pun_region, y_pun_region] = 1
+            elif action in range(ndir + int(self.punish), ndir + int(self.punish) + (self.food_types * 2)):
+                pick = ((action - ndir - int(self.punish)) % 2 == 0)
+                food = floor((action - ndir - int(self.punish)) / 2)
                 if pick:
                     exchange_amount = self.compute_exchange_amount(x, y, food, aid)
                     if exchange_amount > 0:
@@ -198,11 +213,12 @@ class Trade(MultiAgentEnv):
                     self.agent_food_counts[agent][food] += np.sum(self.table[x, y, food])
                     self.table[x, y, food, :] = 0
                 elif self.agent_food_counts[agent][food] >= PLACE_AMOUNT:
-                    self.agent_food_counts[agent][food] -= PLACE_AMOUNT
-                    place_table[x, y, food, aid] += PLACE_AMOUNT
-                    self.placed_counts[agent][food] += PLACE_AMOUNT
+                    actual_place_amount = PLACE_AMOUNT
+                    self.agent_food_counts[agent][food] -= actual_place_amount
+                    place_table[x, y, food, aid] += actual_place_amount
+                    self.placed_counts[agent][food] += actual_place_amount
             # last action is noop
-            elif action in range(4 + self.food_types * 2, self.num_actions-1):
+            elif action in range(4 + self.food_types * 2 + int(self.punish), self.num_actions-1):
                 symbol = action - (self.food_types * 2) - 4
                 assert symbol in range(self.vocab_size)
                 self.communications[agent][symbol] = 1
@@ -212,7 +228,7 @@ class Trade(MultiAgentEnv):
                 continue
             self.agent_food_counts[agent] = [max(x - 0.1, 0) for x in self.agent_food_counts[agent]]
             if max(self.agent_food_counts[agent]) < 0.1:
-                    self.dones[agent] = True
+                self.dones[agent] = True
             else:
                 for f in self.agent_food_counts[agent]:
                     if f < 0.1 and random() < self.death_prob:
@@ -250,6 +266,7 @@ class TradeCallback(DefaultCallbacks):
         self.comm_history = [0 for i in range(env.vocab_size)]
         self.agent_dists = []
         self.action_counts = {act: 0 for act in env.MOVES}
+        self.punish_counts = {agent: 0 for agent in env.agents}
 
     def on_episode_step(self, worker, base_env, policies, episode, **kwargs):
         # there is a bug where on_episode_step gets called where it shouldn't
@@ -265,9 +282,16 @@ class TradeCallback(DefaultCallbacks):
                     continue
                 dists[(a,b)] = inv_dist(env.agent_positions[a], env.agent_positions[b])
         self.agent_dists.append(sum(dists.values()) / max(1, len(dists.values())))
+        self.agent_grid = np.zeros(env.grid_size)
         for a in env.agents:
-            if env.compute_done(a):
+            if not env.compute_done(a):
                 self.action_counts[env.MOVES[episode.last_action_for(a)]] += 1
+                self.agent_grid[env.agent_positions[a]] += 1
+        for aid, a in enumerate(env.agents):
+            ax, ay = env.agent_positions[a]
+            self.punish_counts[a] += np.sum(self.agent_grid * env.punish_frames[aid])\
+                - env.punish_frames[aid, ax, ay]  # remove self-punish
+
 
 
 
@@ -281,6 +305,7 @@ class TradeCallback(DefaultCallbacks):
         for symbol, count in enumerate(self.comm_history):
             episode.custom_metrics[f"comm_{symbol}"] = count
         for agent in env.agents:
+            episode.custom_metrics[f"{agent}_punishes"] = self.punish_counts[agent]
             episode.custom_metrics[f"{agent}_lifetime"] = env.lifetimes[agent]
             episode.custom_metrics[f"{agent}_food_imbalance"] = \
                 max(env.agent_food_counts[agent]) / max(1, min(env.agent_food_counts[agent]))
@@ -325,6 +350,7 @@ if __name__ == "__main__":
                   "vocab_size": 0}
     tenv = Trade(env_config)
     obs = tenv.reset()
+    start = time()
     for i in range(100):
         actions = {}
         for agent in tenv.agents:
@@ -332,10 +358,16 @@ if __name__ == "__main__":
             for i, m in enumerate(tenv.MOVES):
                 print(f"{i, m}", end="")
             print(f"\nAction for {agent}: ", end="")
-            action = int(input())
+            #action = int(input())
+            action = 4
             actions[agent] = action
         obss, rews, dones, infos = tenv.step(actions)
-        print(obss["player_0"])
+        # print("player_0 obs")
+        # print(obss["player_0"])
+        # print("player_1 obs")
+        # print(obss["player_1"])
         if dones["__all__"]:
             print("game over")
+
+            print(f"time: {time() - start}")
             break

@@ -12,3 +12,9 @@ def inv_dist(tup1: tuple, tup2: tuple):
 
 def two_combos(xs: tuple, ys: tuple):
     return [(x, y) for x in xs for y in ys]
+
+def punish_region(x, y, gx, gy):
+    window = 1
+    x_region = slice(max(0, x-window), min(gx, x+window))
+    y_region = slice(max(0, y-window), min(gy, y+window))
+    return x_region, y_region

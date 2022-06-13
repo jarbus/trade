@@ -4,8 +4,10 @@ from ray.tune.registry import register_env
 from ray.rllib.policy.policy import PolicySpec
 from trade_v3 import Trade
 from tune import generate_configs
+from args import get_args
 import os
 
+args = get_args()
 N = 20
 if __name__ == "__main__":
     path = f"/home/garbus/trade/serves"
@@ -25,8 +27,10 @@ if __name__ == "__main__":
 
         env_config, policies = generate_configs()
         env_config["respawn"] = False
-        env_config["random_start"] = False
+        env_config["random_start"] = True
         env_config["vocab_size"] = 0
+        env_config["punish"] = True
+        env_config["punish_coeff"] = 2
         env_config["survival_bonus"] = 0
         test_env = Trade(env_config)
 
