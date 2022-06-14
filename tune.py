@@ -22,14 +22,17 @@ def generate_configs():
                   "food_types": 2,
                   "num_agents": num_agents,
                   "episode_length": 200,
-                  "move_coeff": 0.0,
+                  "move_coeff": args.move_coeff,
                   "dist_coeff": args.dist_coeff,
-                  "death_prob": 0.1,
+                  "death_prob": args.death_prob,
                   "random_start": args.random_start,
+                  "twonn_coeff": args.twonn_coeff,
                   "respawn": args.respawn,
-                  "survival_bonus": 1,
+                  "survival_bonus": args.survival_bonus,
+                  "health_baseline": args.health_baseline,
                   "punish": args.punish,
-                  "punish_coeff": 2,
+                  "full_random_start": args.full_random_start,
+                  "punish_coeff": args.punish_coeff,
                   "vocab_size": 0}
 
     test_env = Trade(env_config)
@@ -45,8 +48,8 @@ def generate_configs():
                 "post_fcnet_hiddens": [64, 64],
                 "post_fcnet_activation": "relu",
                 "use_lstm": True,
-                "lstm_use_prev_action": True,
-                "max_seq_len": 20,
+                "lstm_use_prev_action": False,
+                "max_seq_len": 50,
             },
             "gamma": 0.99,
         }
@@ -75,10 +78,11 @@ class ReusablePPOTrainer(ppo.PPOTrainer):
         self.setup(new_config)
         return True
 
+pbt_interval = args.checkpoint_interval if args.pbt else 10_000_000_000_000
 
 pbt = PopulationBasedTraining(
     time_attr="time_total_s",
-    perturbation_interval=50_000_000_000_000,
+    perturbation_interval=pbt_interval,
     resample_probability=0.25,
     # Specifies the mutations of these hyperparams
     hyperparam_mutations={
@@ -87,6 +91,7 @@ pbt = PopulationBasedTraining(
         "entropy_coeff": lambda: random.uniform(0.01, 0.2),
         "lr": [1e-3, 5e-4, 1e-4, 5e-5, 1e-5],
         "num_sgd_iter": lambda: random.randint(1, 10),
+        "train_batch_size": [100, 500, 1000],
     },
     custom_explore_fn=explore,
 )
@@ -106,17 +111,17 @@ if __name__ == "__main__":
 
     tune.run(
         ReusablePPOTrainer,
-        name=f"recreate-bs1000-punish=False-nors-lstm_prev_a",
+        name=args.name,
         scheduler=pbt,
         metric="episode_reward_mean",
         mode="max",
         resume=False,
-        num_samples=16,
-        stop={"timesteps_total": 10_000_000},
-        checkpoint_freq=500,
+        num_samples=8,
+        stop={"timesteps_total": args.num_steps},
+        checkpoint_freq=args.checkpoint_interval,
         reuse_actors=True,
         #local_dir="~/ray_results/"+env_name,
-        local_dir="/work/garbus/ray_results/punish",
+        local_dir=f"/work/garbus/ray_results/{args.class_name}",
         config={
             # Environment specific
             "env": env_name,
@@ -129,7 +134,7 @@ if __name__ == "__main__":
             "num_gpus": 1,
             "num_workers": 0,
             "num_cpus_for_driver": 1,
-            "num_envs_per_worker": 10,
+            "num_envs_per_worker": 20,
             "batch_mode": 'truncate_episodes',
             "lambda": 0.95,
             "gamma": .99,
@@ -141,7 +146,7 @@ if __name__ == "__main__":
             "sgd_minibatch_size": batch_size,
             "train_batch_size": batch_size,
             'rollout_fragment_length': 50,
-            'lr': tune.choice([1e-04, 1e-05]),
+            'lr': tune.choice([1e-03, 1e-04, 1e-05]),
             # Method specific
             "multiagent": {
                 "policies": policies,

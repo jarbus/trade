@@ -6,12 +6,13 @@ from trade_v3 import Trade
 from tune import generate_configs
 from args import get_args
 import os
+import torch
 
 args = get_args()
 N = 20
 if __name__ == "__main__":
     path = f"/home/garbus/trade/serves"
-    for name in ["CLASS_NAME", "EXP_NAME", "CHECK_NAME"]:
+    for name in ["CLASS_NAME", "EXP_NAME", "TRIAL_NAME", "CHECK_NAME"]:
         path = os.path.join(path, name)
         if not os.path.exists(path):
             os.mkdir(path)
@@ -29,7 +30,7 @@ if __name__ == "__main__":
         env_config["respawn"] = False
         env_config["random_start"] = True
         env_config["vocab_size"] = 0
-        env_config["punish"] = True
+        env_config["punish"] = False
         env_config["punish_coeff"] = 2
         env_config["survival_bonus"] = 0
         test_env = Trade(env_config)
@@ -64,13 +65,14 @@ if __name__ == "__main__":
             policy = trainer.get_policy("pol1")
             states[agent] = policy.get_initial_state()
 
+        actions = {agent: None for agent in obss.keys()}
         for i in range(100):
             f.write(f"--------STEP-{i}--------\n")
             test_env.render(out=f)
-            actions = {}
             for agent in obss.keys():
                 policy = trainer.get_policy("pol1")
                 actions[agent], states[agent], logits = policy.compute_single_action(obs=np.array(obss[agent]), state=states[agent], policy_id=agent)
+                actions[agent] = torch.tensor(actions[agent])
 
             obss, rews, dones, infos = test_env.step({agent: action for agent, action in actions.items() if not test_env.compute_done(agent)})
             for key in test_env.player_exchanges:

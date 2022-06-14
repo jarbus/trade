@@ -32,6 +32,9 @@ class Trade(MultiAgentEnv):
         self.survival_bonus = env_config.get("survival_bonus", 0.0)
         self.respawn = env_config.get("respawn", True)
         self.random_start = env_config.get("random_start", True)
+        self.full_random_start = env_config.get("full_random_start", False)
+        self.twonn_coeff = env_config.get("twonn_coeff", 0.0)
+        self.health_baseline = env_config.get("health_baseline", False)
         self.padded_grid_size = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
         super().__init__()
         # x, y + self, other + selffc, otherfc + food frames + comms
@@ -75,6 +78,8 @@ class Trade(MultiAgentEnv):
         # Usage: random.choice(self.spawn_spots[0-4])
         self.spawn_spots = [[(0,1), (0, 1)], [(0,1), (gy-2,gy-1)], [(gx-2,gx-1), (0,1)], [(gx-2,gx-1), (gy-2,gy-1)]]
         self.spawn_spots = [two_combos(xs, ys) for (xs, ys) in self.spawn_spots]
+        if self.full_random_start:
+            self.spawn_spots = [[(randint(0, gx-1), randint(0,gy-1)) for j in range(4)] for i in range(4)]
         fc = 4 if self.respawn else 10
         food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
         if self.random_start:
@@ -169,7 +174,15 @@ class Trade(MultiAgentEnv):
                 #if self.agent_positions[a] == pos:
                 #    same_poses += 1
         dists.sort()
-        rew = 1 + (self.dist_coeff * dists[-1]) + other_survival_bonus
+
+        if self.health_baseline:
+            health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else 0
+        else:
+            health = 1
+        rew  = health 
+        rew += (self.dist_coeff * dists[-1])
+        rew += other_survival_bonus
+        rew -= (self.twonn_coeff * dists[-2])
         rew -= self.punish_coeff * punishment
         rew -= self.move_coeff * int(self.moved_last_turn[agent])
         #if same_poses > 2:
@@ -364,8 +377,7 @@ if __name__ == "__main__":
             for i, m in enumerate(tenv.MOVES):
                 print(f"{i, m}", end="")
             print(f"\nAction for {agent}: ", end="")
-            #action = int(input())
-            action = 4
+            action = int(input())
             actions[agent] = action
         obss, rews, dones, infos = tenv.step(actions)
         # print("player_0 obs")

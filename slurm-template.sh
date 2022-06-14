@@ -13,7 +13,7 @@
 #SBATCH --requeue
 #SBATCH --partition=guest-gpu
 #SBATCH --gres=gpu:TitanX:8
-#SBATCH --nodes=2
+#SBATCH --nodes=1
 #SBATCH --exclusive
 #SBATCH --exclude=gpu-6-9
 #SBATCH --ntasks-per-node=1
