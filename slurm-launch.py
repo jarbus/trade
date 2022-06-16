@@ -9,8 +9,9 @@ import sys
 import time
 
 from pathlib import Path
+from DIRS import *
 
-template_file = "/home/garbus/trade/slurm-template.sh"
+template_file = f"{TRADE_DIR}/slurm-template.sh"
 JOB_NAME = "${JOB_NAME}"
 RUN_NAME = "${RUN_NAME}"
 NUM_NODES = "${NUM_NODES}"
@@ -99,7 +100,7 @@ if __name__ == "__main__":
             )
 
     # ===== Save the script =====
-    script_file = "/work/garbus/ray_logs/{}.sh".format(run_name)
+    script_file = f"{RUN_DIR}/{run_name}.sh"
     with open(script_file, "w") as f:
         f.write(text)
 

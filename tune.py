@@ -8,6 +8,7 @@ from ray.rllib.policy.policy import PolicySpec
 from trade_v3 import Trade, TradeCallback
 from ray.tune.schedulers import PopulationBasedTraining
 import random
+from DIRS import *
 
 
 
@@ -127,8 +128,7 @@ if __name__ == "__main__":
         stop={"timesteps_total": args.num_steps},
         checkpoint_freq=args.checkpoint_interval,
         reuse_actors=True,
-        #local_dir="~/ray_results/"+env_name,
-        local_dir=f"/work/garbus/ray_results/{args.class_name}",
+        local_dir=f"{RESULTS_DIR}/{args.class_name}",
         config={
             # Environment specific
             "env": env_name,

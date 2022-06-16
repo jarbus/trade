@@ -1,10 +1,11 @@
-ranger-select /work/garbus/ray_results
+source DIRS.py
+ranger-select "$RESULTS_DIR"
 if [[ -f $(cat /tmp/ranger-select.txt) ]]; then
     file=$(cat /tmp/ranger-select.txt)
-    class=$(echo "$file" | grep -oP "/work/garbus/ray_results/\K[^/]*")
-    exp=$(echo "$file" | grep -oP "/work/garbus/ray_results/[^/]*/\K[^/]*")
-    trial=$(echo "$file" | grep -oP "/work/garbus/ray_results/[^/]*/[^/]*/\K[^/]*")
-    check=$(echo "$file" | grep -oP "/work/garbus/ray_results/[^/]*/[^/]*/[^/]*/\K[^/]*")
+    class=$(echo "$file" | grep -oP "$RESULTS_DIR/\K[^/]*")
+    exp=$(echo "$file" | grep -oP "$RESULTS_DIR/[^/]*/\K[^/]*")
+    trial=$(echo "$file" | grep -oP "$RESULTS_DIR/[^/]*/[^/]*/\K[^/]*")
+    check=$(echo "$file" | grep -oP "$RESULTS_DIR/[^/]*/[^/]*/[^/]*/\K[^/]*")
     file=${file//\//\\\/}
     sed -e "s/CHECKPOINT_PATH/$file/"\
         -e "s/EXP_NAME/$exp/"\
