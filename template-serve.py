@@ -27,12 +27,6 @@ if __name__ == "__main__":
 
 
         env_config, policies = generate_configs()
-        env_config["respawn"] = False
-        env_config["random_start"] = True
-        env_config["vocab_size"] = 0
-        env_config["punish"] = False
-        env_config["punish_coeff"] = 2
-        env_config["survival_bonus"] = 0
         test_env = Trade(env_config)
 
         trainer = ppo.PPOTrainer(

@@ -18,7 +18,7 @@ def generate_configs():
 # env_config = {"food_types": num_agents, "num_agents": num_agents, "episode_length": 20, "vocab_size": 0}
 
     env_config = {"window": (3, 3),
-                  "grid": (5, 5),
+                  "grid": (args.gx, args.gy),
                   "food_types": 2,
                   "num_agents": num_agents,
                   "episode_length": 200,
@@ -146,7 +146,7 @@ if __name__ == "__main__":
             "sgd_minibatch_size": batch_size,
             "train_batch_size": batch_size,
             'rollout_fragment_length': 50,
-            'lr': tune.choice([1e-03, 1e-04, 1e-05]),
+            'lr': tune.choice([1e-04, 1e-05]),
             # Method specific
             "multiagent": {
                 "policies": policies,

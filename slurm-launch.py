@@ -99,7 +99,7 @@ if __name__ == "__main__":
             )
 
     # ===== Save the script =====
-    script_file = "runs/{}.sh".format(run_name)
+    script_file = "/work/garbus/ray_logs/{}.sh".format(run_name)
     with open(script_file, "w") as f:
         f.write(text)
 

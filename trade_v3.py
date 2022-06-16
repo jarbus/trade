@@ -176,7 +176,7 @@ class Trade(MultiAgentEnv):
         dists.sort()
 
         if self.health_baseline:
-            health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else 0
+            health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else 0.5
         else:
             health = 1
         rew  = health 
@@ -257,8 +257,8 @@ class Trade(MultiAgentEnv):
         #self.table = self.table + place_table
         # RESET FOOD EVERY TEN ITERS
         self.steps += 1
-        if self.respawn and self.steps % 15 == 0:
-            fc = 4 if self.respawn else 10
+        if self.respawn and self.steps % 20 == 0:
+            fc = 4
             food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
             for spawn_spot, (ft, fc) in zip(self.spawn_spots, food_counts):
                 fx, fy = choice(spawn_spot)

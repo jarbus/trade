@@ -1,0 +1,1 @@
+--class-name post --gx 7 --gy 7 --random-start --dist-coeff 0.2 --batch-size 1000 --death-prob 0.1 --num-steps 10000000 --checkpoint-interval 500 --twonn-coeff 0.0 --health-baseline
