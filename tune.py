@@ -64,6 +64,11 @@ def generate_configs():
         policies = {f"pol1": policy}
         def policy_mapping_fn(aid, **kwargs):
             return "pol1"
+    elif args.two_policies:
+        pol1, pol2 = gen_policy(0), gen_policy(1)
+        policies = {f"pol1": pol1, "pol2": pol2}
+        def policy_mapping_fn(aid, **kwargs):
+            return "pol1" if aid in {"player_0", "player_1"} else  "pol2"
     else:
         policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
         def policy_mapping_fn(aid, **kwargs):

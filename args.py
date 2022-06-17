@@ -21,6 +21,7 @@ def get_args():
     parser.add_argument('--full-random-start', action="store_true")
     parser.add_argument('--health-baseline', action="store_true")
     parser.add_argument('--parameter-sharing', action="store_true")
+    parser.add_argument('--two-policies', action="store_true")
     parser.add_argument('--respawn', action="store_true")
     parser.add_argument('--punish', action="store_true")
     parser.add_argument('--pbt', action="store_true")
