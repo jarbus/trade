@@ -17,6 +17,7 @@ def get_args():
     parser.add_argument('--death-prob', type=float, default=0.1)
     parser.add_argument('--survival-bonus', type=float, default=0.0)
     parser.add_argument('--random-start', action="store_true")
+    parser.add_argument('--self-other-frames', action="store_true")
     parser.add_argument('--full-random-start', action="store_true")
     parser.add_argument('--health-baseline', action="store_true")
     parser.add_argument('--respawn', action="store_true")

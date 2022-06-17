@@ -27,6 +27,7 @@ class Trade(MultiAgentEnv):
         self.dist_coeff = env_config.get("dist_coeff", 0.5)
         self.move_coeff = env_config.get("move_coeff", 0.5)
         self.death_prob = env_config.get("death_prob", 0.1)
+        self.self_other_frames = env_config.get("self_other_frames", False)
         self.punish = env_config.get("punish", True)
         self.punish_coeff = env_config.get("punish_coeff", 3)
         self.survival_bonus = env_config.get("survival_bonus", 0.0)
@@ -115,26 +116,31 @@ class Trade(MultiAgentEnv):
         minx, maxx = ax, ax+(2*wx)+1
         miny, maxy = ay, ay+(2*wy)+1
         food_frames = self.table.sum(axis=3).transpose(2, 0, 1)  # frame for each food
-        other_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
-        self_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
-        #agent_food_frames = np.zeros((self.food_types*len(self.agents), *self.grid_size), dtype=np.float32)
         comm_frames = np.zeros((self.vocab_size, *self.grid_size), dtype=np.float32)
-        #agent_frames = np.zeros((len(self.agents), *self.grid_size), dtype=np.float32)
-        self_frame = np.zeros(self.grid_size, dtype=np.float32)
-        other_frame = np.zeros(self.grid_size, dtype=np.float32)
+        if self.self_other_frames:
+            self_frame = np.zeros(self.grid_size, dtype=np.float32)
+            other_frame = np.zeros(self.grid_size, dtype=np.float32)
+            other_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
+            self_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
+        else:
+            agent_food_frames = np.zeros((self.food_types*len(self.agents), *self.grid_size), dtype=np.float32)
+            agent_frames = np.zeros((len(self.agents), *self.grid_size), dtype=np.float32)
         self_frame[ax, ay] = 1
         for i, a in enumerate(self.agents):
             if self.compute_done(a):
                 continue
             oax, oay = self.agent_positions[a]
             comm_frames[:, oax, oay] = self.communications[a]
-            if a != agent:
-                other_frame[oax, oay] += 1
-                for f in range(self.food_types):
-                    other_food_frames[f, oax, oay] += self.agent_food_counts[a][f]
+            if self.self_other_frames:
+                if a != agent:
+                    other_frame[oax, oay] += 1
+                    other_food_frames[:, oax, oay] += self.agent_food_counts[a]
+                else:
+                    self_food_frames[:,  oax, oay] += self.agent_food_counts[a]
             else:
-                for f in range(self.food_types):
-                    self_food_frames[f, oax, oay] += self.agent_food_counts[a][f]
+                agent_food_frames[2*i:2*(i+1), oax, oay] = self.agent_food_counts[a]
+                agent_frames[i, oax, oay] = 1
+
         xpos_frame = np.repeat(np.arange(gy).reshape(1, gy), gx, axis=0) / gx
         ypos_frame = np.repeat(np.arange(gx).reshape(gx, 1), gy, axis=1) / gy
 
@@ -143,7 +149,12 @@ class Trade(MultiAgentEnv):
         else:
             pun_frames = np.zeros((0, *self.grid_size), dtype=np.float32)
 
-        frames = np.stack([*food_frames, *self_food_frames, *pun_frames,  *other_food_frames, *comm_frames, other_frame, self_frame, xpos_frame, ypos_frame])
+        if self.self_other_frames:
+            agent_and_food_frames = np.stack([self_frame, other_frame, *self_food_frames, *other_food_frames])
+        else:
+            agent_and_food_frames = np.stack([*agent_frames, *agent_food_frames])
+
+        frames = np.stack([*food_frames, *agent_and_food_frames, xpos_frame, ypos_frame, *pun_frames, *comm_frames])
         padded_frames = np.full((frames.shape[0], *self.padded_grid_size), -1, dtype=np.float32)
         padded_frames[:, wx:(gx+wx), wy:(gy+wy)] = frames
         obs = padded_frames[:, minx:maxx, miny:maxy] / 30
