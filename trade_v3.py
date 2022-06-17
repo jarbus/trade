@@ -122,10 +122,10 @@ class Trade(MultiAgentEnv):
             other_frame = np.zeros(self.grid_size, dtype=np.float32)
             other_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
             self_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
+            self_frame[ax, ay] = 1
         else:
             agent_food_frames = np.zeros((self.food_types*len(self.agents), *self.grid_size), dtype=np.float32)
             agent_frames = np.zeros((len(self.agents), *self.grid_size), dtype=np.float32)
-        self_frame[ax, ay] = 1
         for i, a in enumerate(self.agents):
             if self.compute_done(a):
                 continue
@@ -141,18 +141,19 @@ class Trade(MultiAgentEnv):
                 agent_food_frames[2*i:2*(i+1), oax, oay] = self.agent_food_counts[a]
                 agent_frames[i, oax, oay] = 1
 
-        xpos_frame = np.repeat(np.arange(gy).reshape(1, gy), gx, axis=0) / gx
-        ypos_frame = np.repeat(np.arange(gx).reshape(gx, 1), gy, axis=1) / gy
+        if self.self_other_frames:
+            agent_and_food_frames = np.stack([self_frame, other_frame, *self_food_frames, *other_food_frames])
+        else:
+            agent_and_food_frames = np.stack([*agent_frames, *agent_food_frames])
 
         if self.punish:
             pun_frames = np.sum(self.punish_frames, axis=0)[None, :, :]
         else:
             pun_frames = np.zeros((0, *self.grid_size), dtype=np.float32)
 
-        if self.self_other_frames:
-            agent_and_food_frames = np.stack([self_frame, other_frame, *self_food_frames, *other_food_frames])
-        else:
-            agent_and_food_frames = np.stack([*agent_frames, *agent_food_frames])
+
+        xpos_frame = np.repeat(np.arange(gy).reshape(1, gy), gx, axis=0) / gx
+        ypos_frame = np.repeat(np.arange(gx).reshape(gx, 1), gy, axis=1) / gy
 
         frames = np.stack([*food_frames, *agent_and_food_frames, xpos_frame, ypos_frame, *pun_frames, *comm_frames])
         padded_frames = np.full((frames.shape[0], *self.padded_grid_size), -1, dtype=np.float32)
