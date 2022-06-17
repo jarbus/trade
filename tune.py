@@ -32,6 +32,8 @@ def generate_configs():
                   "survival_bonus": args.survival_bonus,
                   "health_baseline": args.health_baseline,
                   "punish": args.punish,
+                  "self_other_frames": args.self_other_frames,
+                  "parameter_sharing": args.parameter_sharing,
                   "full_random_start": args.full_random_start,
                   "punish_coeff": args.punish_coeff,
                   "vocab_size": 0}

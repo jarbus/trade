@@ -28,6 +28,7 @@ class Trade(MultiAgentEnv):
         self.move_coeff = env_config.get("move_coeff", 0.5)
         self.death_prob = env_config.get("death_prob", 0.1)
         self.self_other_frames = env_config.get("self_other_frames", False)
+        self.parameter_sharing = env_config.get("parameter_sharing", False)
         self.punish = env_config.get("punish", True)
         self.punish_coeff = env_config.get("punish_coeff", 3)
         self.survival_bonus = env_config.get("survival_bonus", 0.0)
@@ -38,8 +39,14 @@ class Trade(MultiAgentEnv):
         self.health_baseline = env_config.get("health_baseline", False)
         self.padded_grid_size = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
         super().__init__()
-        # x, y + self, other + selffc, otherfc + food frames + comms
-        self.channels = 2 + 2 + (2*self.food_types) + (self.food_types) + (self.vocab_size) + int(self.punish)
+        if self.self_other_frames:
+            #                 self, other pos   self, other foods
+            food_frame_and_agent_channels = 2 + (2*self.food_types)
+        else:
+            #                              agent_poses       agent foods
+            food_frame_and_agent_channels = num_agents + (self.food_types*num_agents)
+        # x, y + agents_and_foods + food frames + comms
+        self.channels = 2 + food_frame_and_agent_channels + (self.food_types) + (self.vocab_size) + int(self.punish)
         self.agent_food_counts = dict()
         self.MOVES = ["UP", "DOWN", "LEFT", "RIGHT"]
         if self.punish:
