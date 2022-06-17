@@ -4,6 +4,7 @@ import argparse
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
 
+plt.style.use('dark_background')
 parser = argparse.ArgumentParser(description="Convert serve file to gif")
 parser.add_argument("file", type=str)
 args = parser.parse_args()
@@ -32,7 +33,8 @@ class Step:
 
 
 all_exchange_messages = []
-player_colors = ["b", "g", "y", "r"]
+player_colors = ["olivedrab", "darkcyan", "mediumslateblue", "purple"]
+food_colors = ["red", "yellow"]
 offv = 0.01
 player_offsets = (0, offv), (offv, 0), (0, -offv), (-offv, 0)
 food_offsets = (offv, offv), (-offv, -offv)
@@ -60,17 +62,6 @@ def plot_step(step: Step):
     fig.text(vs + 0.05, 1-0.07, "-----------------------------------------")
     for i, message in enumerate(all_exchange_messages[-18:]):
         fig.text(vs + 0.02, hs-((i+1)*0.03), f"{message}", fontsize=8, wrap=True)
-    for f, fg in enumerate(step.food_grid):
-        for row, frow in enumerate(fg):
-            for col, fcount in enumerate(frow):
-                if fcount <= 0:
-                    continue
-                f_pos = (row/scale, col/scale)
-                f_pos = add_tuple(f_pos, food_offsets[f])
-                f_pos = add_tuple(f_pos, grid_offset)
-                color = "black" if f == 0 else "orange"
-                circ = plt.Circle(f_pos, radius=0.02*fcount/scale, color=color, fill=True)
-                grid.add_patch(circ)
     for i, player in enumerate(step.players):
         color = player_colors[i] if not player.done else "lightgrey"
         fig.text(vs + 0.05, 1-((i+2)*0.05), f"{player}", fontsize=10, wrap=True, family="monospace", color=color)
@@ -82,6 +73,16 @@ def plot_step(step: Step):
         if player.done:
             grid.text(*add_tuple(p_pos, (-radius/1.5, -radius/1.5)), f"{i}", fontsize=10, wrap=True, family="monospace")
         grid.add_patch(circ)
+    for f, fg in enumerate(step.food_grid):
+        for row, frow in enumerate(fg):
+            for col, fcount in enumerate(frow):
+                if fcount <= 0:
+                    continue
+                f_pos = (row/scale, col/scale)
+                f_pos = add_tuple(f_pos, food_offsets[f])
+                f_pos = add_tuple(f_pos, grid_offset)
+                circ = plt.Circle(f_pos, radius=0.02*fcount/scale, color=food_colors[f], fill=True)
+                grid.add_patch(circ)
 
 
 with open(args.file, "r") as file:
