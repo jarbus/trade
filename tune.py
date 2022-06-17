@@ -8,6 +8,7 @@ from ray.rllib.policy.policy import PolicySpec
 from trade_v3 import Trade, TradeCallback
 from ray.tune.schedulers import PopulationBasedTraining
 import random
+from DIRS import *
 
 
 
@@ -56,9 +57,16 @@ def generate_configs():
         return PolicySpec(None, obs_space, act_space, config)
 
     # policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
-    policy = gen_policy(0)
-    policies = {f"pol1": policy } #for a in range(num_agents)}
-    return env_config, policies
+    if args.parameter_sharing:
+        policy = gen_policy(0)
+        policies = {f"pol1": policy}
+        def policy_mapping_fn(aid, **kwargs):
+            return "pol1"
+    else:
+        policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
+        def policy_mapping_fn(aid, **kwargs):
+            return aid
+    return env_config, policies, policy_mapping_fn
 
 
 
@@ -106,7 +114,7 @@ if __name__ == "__main__":
 
     register_env(env_name, lambda config: Trade(config))
 
-    env_config, policies = generate_configs()
+    env_config, policies, policy_mapping_fn = generate_configs()
     batch_size = args.batch_size
 
     tune.run(
@@ -120,8 +128,7 @@ if __name__ == "__main__":
         stop={"timesteps_total": args.num_steps},
         checkpoint_freq=args.checkpoint_interval,
         reuse_actors=True,
-        #local_dir="~/ray_results/"+env_name,
-        local_dir=f"/work/garbus/ray_results/{args.class_name}",
+        local_dir=f"{RESULTS_DIR}/{args.class_name}",
         config={
             # Environment specific
             "env": env_name,
@@ -150,5 +157,5 @@ if __name__ == "__main__":
             # Method specific
             "multiagent": {
                 "policies": policies,
-                "policy_mapping_fn": (lambda aid, **kwargs: "pol1"),
+                "policy_mapping_fn": policy_mapping_fn,
             }})

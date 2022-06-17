@@ -26,7 +26,7 @@ if __name__ == "__main__":
         num_agents = 4
 
 
-        env_config, policies = generate_configs()
+        env_config, policies, policy_mapping_fn = generate_configs()
         test_env = Trade(env_config)
 
         trainer = ppo.PPOTrainer(
@@ -43,7 +43,7 @@ if __name__ == "__main__":
                 # Method specific
                 "multiagent": {
                     "policies": policies,
-                    "policy_mapping_fn": (lambda aid, **kwargs: "pol1"),
+                    "policy_mapping_fn": policy_mapping_fn,
                 },
 
             },
