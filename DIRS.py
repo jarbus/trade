@@ -1,4 +1,4 @@
-RESULTS_DIR="/home/jack/ray_results"
-TRADE_DIR="/home/jack/trade"
-RUN_DIR="/home/jack/trade/runs"
-SERVE_DIR="/home/jack/trade/runs"
+RESULTS_DIR="/home/jack/s4/TradeEnv/trade/results"
+TRADE_DIR="/home/jack/s4/TradeEnv/trade"
+RUN_DIR="/home/jack/s4/TradeEnv/trade/runs"
+SERVE_DIR="/home/jack/s4/TradeEnv/trade/serves"
