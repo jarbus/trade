@@ -6,6 +6,8 @@ from math import floor
 from ray.rllib.agents.callbacks import DefaultCallbacks
 from utils import add_tup, directions, valid_pos, inv_dist, two_combos, punish_region
 from pdb import set_trace as T
+from light import Light
+from light import *
 import sys
 from time import time
 
@@ -18,26 +20,30 @@ class Trade(MultiAgentEnv):
 
     def __init__(self, env_config):
         print(f"Creating Trade environment {env_config}")
-        self.food_types = env_config.get("food_types", 2)
-        num_agents = env_config.get("num_agents", 2)
-        self.max_steps = env_config.get("episode_length", 100)
-        self.vocab_size = env_config.get("vocab_size", 0)
-        self.grid_size = env_config.get("grid", (1, 5))
-        self.window_size = env_config.get("window", (1, 5))
-        self.dist_coeff = env_config.get("dist_coeff", 0.5)
-        self.move_coeff = env_config.get("move_coeff", 0.5)
-        self.death_prob = env_config.get("death_prob", 0.1)
-        self.self_other_frames = env_config.get("self_other_frames", False)
-        self.parameter_sharing = env_config.get("parameter_sharing", False)
-        self.punish = env_config.get("punish", True)
-        self.punish_coeff = env_config.get("punish_coeff", 3)
-        self.survival_bonus = env_config.get("survival_bonus", 0.0)
-        self.respawn = env_config.get("respawn", True)
-        self.random_start = env_config.get("random_start", True)
-        self.full_random_start = env_config.get("full_random_start", False)
-        self.twonn_coeff = env_config.get("twonn_coeff", 0.0)
-        self.health_baseline = env_config.get("health_baseline", False)
-        self.padded_grid_size = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
+        gx, gy = self.grid_size    = env_config.get("grid", (1, 5))
+        self.food_types            = env_config.get("food_types", 2)
+        num_agents                 = env_config.get("num_agents", 2)
+        self.max_steps             = env_config.get("episode_length", 100)
+        self.vocab_size            = env_config.get("vocab_size", 0)
+        self.window_size           = env_config.get("window", (1, 5))
+        self.dist_coeff            = env_config.get("dist_coeff", 0.5)
+        self.move_coeff            = env_config.get("move_coeff", 0.5)
+        self.death_prob            = env_config.get("death_prob", 0.1)
+        self.self_other_frames     = env_config.get("self_other_frames", False)
+        self.parameter_sharing     = env_config.get("parameter_sharing", False)
+        self.day_night_cycle       = env_config.get("day_night_cycle", True)
+        self.day_steps             = env_config.get("day_steps", 20)
+        self.night_time_death_prob = env_config.get("night_time_death_prob", True)
+        self.punish                = env_config.get("punish", True)
+        self.punish_coeff          = env_config.get("punish_coeff", 3)
+        self.survival_bonus        = env_config.get("survival_bonus", 0.0)
+        self.respawn               = env_config.get("respawn", True)
+        self.random_start          = env_config.get("random_start", True)
+        self.full_random_start     = env_config.get("full_random_start", False)
+        self.twonn_coeff           = env_config.get("twonn_coeff", 0.0)
+        self.health_baseline       = env_config.get("health_baseline", False)
+        self.padded_grid_size      = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
+        self.light                 = Light(self.grid_size, 0.1)
         super().__init__()
         if self.self_other_frames:
             #                 self, other pos   self, other foods
@@ -46,7 +52,7 @@ class Trade(MultiAgentEnv):
             #                              agent_poses       agent foods
             food_frame_and_agent_channels = num_agents + (self.food_types*num_agents)
         # x, y + agents_and_foods + food frames + comms
-        self.channels = 2 + food_frame_and_agent_channels + (self.food_types) + (self.vocab_size) + int(self.punish)
+        self.channels = 2 + food_frame_and_agent_channels + (self.food_types) + (self.vocab_size) + int(self.punish) + int(self.day_night_cycle)
         self.agent_food_counts = dict()
         self.MOVES = ["UP", "DOWN", "LEFT", "RIGHT"]
         if self.punish:
@@ -73,6 +79,7 @@ class Trade(MultiAgentEnv):
             np.random.seed(seed)
 
     def reset(self):
+        self.light.reset()
         self.agents = self.possible_agents[:]
         self.dones = {agent: False for agent in self.agents}
         self.moved_last_turn = {agent: False for agent in self.agents}
@@ -158,11 +165,16 @@ class Trade(MultiAgentEnv):
         else:
             pun_frames = np.zeros((0, *self.grid_size), dtype=np.float32)
 
+        if self.day_night_cycle:
+            light_frames = self.light.frame()[None, :, :]
+        else:
+            light_frames = np.zeros((0, *self.grid_size), dtype=np.float32)
+
 
         xpos_frame = np.repeat(np.arange(gy).reshape(1, gy), gx, axis=0) / gx
         ypos_frame = np.repeat(np.arange(gx).reshape(gx, 1), gy, axis=1) / gy
 
-        frames = np.stack([*food_frames, *agent_and_food_frames, xpos_frame, ypos_frame, *pun_frames, *comm_frames])
+        frames = np.stack([*food_frames, *agent_and_food_frames, xpos_frame, ypos_frame, *light_frames, *pun_frames, *comm_frames])
         padded_frames = np.full((frames.shape[0], *self.padded_grid_size), -1, dtype=np.float32)
         padded_frames[:, wx:(gx+wx), wy:(gy+wy)] = frames
         obs = padded_frames[:, minx:maxx, miny:maxy] / 30
@@ -214,7 +226,21 @@ class Trade(MultiAgentEnv):
     def compute_pick_amount(self, x: int, y: int, food: int, picker: int):
         return self.table[x][y][food][len(self.agents)]
 
+    def update_dones(self):
+        for agent in self.agents:
+            if self.compute_done(agent):
+                continue
+            if max(self.agent_food_counts[agent]) < 0.1:
+                self.dones[agent] = True
+            else:
+                for f in self.agent_food_counts[agent]:
+                    if f < 0.1 and random() < self.death_prob:
+                        self.dones[agent] = True
+            if not self.light.contains(self.agent_positions[agent]) and random() < self.night_time_death_prob:
+                self.dones[agent] = True
+
     def step(self, actions):
+        self.light.step_light()
         # all agents execute their action
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
         self.punish_frames = np.zeros((len(self.agents), *self.grid_size))
@@ -260,17 +286,10 @@ class Trade(MultiAgentEnv):
                 symbol = action - (self.food_types * 2) - 4
                 assert symbol in range(self.vocab_size)
                 self.communications[agent][symbol] = 1
-
-        for agent in self.agents:
-            if self.compute_done(agent):
-                continue
             self.agent_food_counts[agent] = [max(x - 0.1, 0) for x in self.agent_food_counts[agent]]
-            if max(self.agent_food_counts[agent]) < 0.1:
-                self.dones[agent] = True
-            else:
-                for f in self.agent_food_counts[agent]:
-                    if f < 0.1 and random() < self.death_prob:
-                        self.dones[agent] = True
+
+        self.update_dones()
+
 
         # Once agents complete all actions, add placed food to table
         #self.table = self.table + place_table

@@ -1,11 +1,15 @@
 import argparse
 
+
 def get_args():
     parser = argparse.ArgumentParser(description='Execute Trading Environment.')
     parser.add_argument('--ip', type=str)
     parser.add_argument('--name', type=str, default="test")
     parser.add_argument('--class-name', type=str, default="class")
     parser.add_argument('--batch-size', type=int, default=500)
+    parser.add_argument('--day-night-cycle', action="store_true")
+    parser.add_argument('--day-steps', type=int, default=20)
+    parser.add_argument('--night-time-death-prob', type=float, default=0.1)
     parser.add_argument('--checkpoint-interval', type=int, default=500)
     parser.add_argument('--punish-coeff', type=float, default=2.0)
     parser.add_argument('--dist-coeff', type=float, default=1.0)
