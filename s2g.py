@@ -4,7 +4,7 @@ import argparse
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
 
-plt.style.use('dark_background')
+#plt.style.use('dark_background')
 parser = argparse.ArgumentParser(description="Convert serve file to gif")
 parser.add_argument("file", type=str)
 args = parser.parse_args()
@@ -12,6 +12,7 @@ args = parser.parse_args()
 player_expr = r"(player_\d): \((\d), (\d)\) \[(.*), (.*)\] (.*)$"
 exchange_expr = r"Exchange: (player_\d) gave (\S*) of food (\d) to (player_\d)"
 food_expr = r"food(\d):"
+light_expr = r"Light: (.*)$"
 
 @dataclass
 class Player:
@@ -30,6 +31,7 @@ class Step:
     players: list[Player]
     exchange_messages: list[str]
     food_grid: list[list[float]]
+    light_level: float
 
 
 all_exchange_messages = []
@@ -49,6 +51,7 @@ def plot_step(step: Step):
     hs = 0.6
     #axes.append(fig.add_axes([x, y, w, h]))
     grid = fig.add_axes([0.05, 0.15, vs - 0.1, 0.7])
+    grid.set_facecolor(f'{(float(step.light_level) + 1) / 2}')
     player_info = fig.add_axes([vs, hs, 1-vs, 1-hs])
     exchange_info = fig.add_axes([vs, 0, 1-vs, hs])
 
@@ -100,9 +103,9 @@ for i in range(len(steps)-1):
 frames = []
 
 num_steps = len(step_slices)
-# num_steps = 1  # len(step_slices)
+num_steps = 10  # len(step_slices)
 for i in range(num_steps):
-    step = Step(i, [], [], [])
+    step = Step(i, [], [], [], 1)
     food = 0
     for line in lines[step_slices[i]]:
         if m := re.match(player_expr, line):
@@ -118,6 +121,10 @@ for i in range(num_steps):
         if m := re.match(food_expr, line):
             food = m.groups()
             step.food_grid.append([])
+
+        if m := re.match(light_expr, line):
+            light = m.groups()[0]
+            step.light_level = light
         # Food
         if line.strip().startswith("["):
             step.food_grid[-1].append([float(f) for f in line.strip().replace("[", "").replace("]", "").split()])
