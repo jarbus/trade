@@ -1,18 +1,19 @@
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gym.spaces import Discrete, Box
 import numpy as np
-from random import randint, random, shuffle, choice
+from random import random, shuffle
 from math import floor
-from ray.rllib.agents.callbacks import DefaultCallbacks
-from utils import add_tup, directions, valid_pos, inv_dist, two_combos, punish_region
+from .utils import add_tup, directions, valid_pos, inv_dist, punish_region
 from pdb import set_trace as T
-from light import Light
-from light import *
+from .light import Light, FIRE_LIGHT_LEVEL, MAX_LIGHT_LEVEL, STARTING_LIGHT_LEVEL
+from .spawners import CenterSpawner, FourCornerSpawner, RandomSpawner
 import sys
 from time import time
 
-NUM_ITERS = 100
+METABOLISM=0.1
 PLACE_AMOUNT = 0.5
+
+NUM_ITERS = 100
 ndir = len(directions)
 
 class Trade(MultiAgentEnv):
@@ -38,8 +39,7 @@ class Trade(MultiAgentEnv):
         self.punish_coeff          = env_config.get("punish_coeff", 3)
         self.survival_bonus        = env_config.get("survival_bonus", 0.0)
         self.respawn               = env_config.get("respawn", True)
-        self.random_start          = env_config.get("random_start", True)
-        self.full_random_start     = env_config.get("full_random_start", False)
+        self.spawn_agents          = env_config.get("spawn-agents", True)
         self.twonn_coeff           = env_config.get("twonn_coeff", 0.0)
         self.health_baseline       = env_config.get("health_baseline", False)
         self.padded_grid_size      = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
@@ -65,9 +65,18 @@ class Trade(MultiAgentEnv):
         self.num_exchanges = []
         self.communications = {}
 
+        if self.spawn_agents == "center":
+            self.agent_spawner = CenterSpawner(self.grid_size)
+        elif self.spawn_agents == "corner":
+            self.agent_spawner = FourCornerSpawner(self.grid_size)
+        else:
+            self.agent_spawner = RandomSpawner(self.grid_size)
+
+        self.food_spawner = FourCornerSpawner(self.grid_size)
+
+
         self.possible_agents = ["player_" + str(r) for r in range(num_agents)]
         self.agents = self.possible_agents[:]
-        self.agent_name_mapping = dict(zip(self.possible_agents, list(range(len(self.possible_agents)))))
 
         self.action_space = Discrete(self.num_actions)
         self.obs_size = (self.channels, *add_tup(add_tup(self.window_size, self.window_size), (1, 1)))
@@ -77,6 +86,14 @@ class Trade(MultiAgentEnv):
     def seed(self, seed=None):
         if seed:
             np.random.seed(seed)
+
+    def spawn_food(self):
+        fc = 4 if self.respawn else 10
+        food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
+        spawn_spots = self.food_spawner.gen_poses()
+        for spawn_spot, (ft, fc) in zip(spawn_spots, food_counts):
+            fx, fy = spawn_spot
+            self.table[fx, fy, ft, len(self.agents)] = fc
 
     def reset(self):
         self.light.reset()
@@ -90,26 +107,15 @@ class Trade(MultiAgentEnv):
         self.table = np.zeros((*self.grid_size, self.food_types, len(self.agents)+1), dtype=np.float32)
 
         self.punish_frames = np.zeros((len(self.agents), *self.grid_size))
-        # Usage: random.choice(self.spawn_spots[0-4])
-        self.spawn_spots = [[(0,1), (0, 1)], [(0,1), (gy-2,gy-1)], [(gx-2,gx-1), (0,1)], [(gx-2,gx-1), (gy-2,gy-1)]]
-        self.spawn_spots = [two_combos(xs, ys) for (xs, ys) in self.spawn_spots]
-        if self.full_random_start:
-            self.spawn_spots = [[(randint(0, gx-1), randint(0,gy-1)) for j in range(4)] for i in range(4)]
-        fc = 4 if self.respawn else 10
-        food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
-        if self.random_start:
-            shuffle(food_counts)
-            shuffle(self.spawn_spots)
-        for spawn_spot, (ft, fc) in zip(self.spawn_spots, food_counts):
-            fx, fy = choice(spawn_spot)
-            self.table[fx, fy, ft, len(self.agents)] = fc
-        self.agent_positions = {agent: choice(spawn_spots) for agent, spawn_spots in zip(self.agents, self.spawn_spots)}
+        self.spawn_food()
+        spawn_spots = self.agent_spawner.gen_poses()
+        self.agent_positions = {agent: spawn_spot for agent, spawn_spot in zip(self.agents, spawn_spots)}
         self.steps = 0
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
         self.num_exchanges = [0]*self.food_types
         self.player_exchanges = {(a, b, f): 0 for a in self.agents for b in self.agents for f in range(self.food_types)}
         self.lifetimes = {agent: 0 for agent in self.agents}
-        self.agent_food_counts = {"player_0": [1, 1], "player_1": [1, 1], "player_2": [1, 1], "player_3": [1, 1]}
+        self.agent_food_counts = {agent: [1, 1] for agent in self.agents}
         return {agent: self.compute_observation(agent) for agent in self.agents}
 
     def render(self, mode="human", out=sys.stdout):
@@ -212,7 +218,7 @@ class Trade(MultiAgentEnv):
             health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else 0.5
         else:
             health = 1
-        rew  = health 
+        rew  = health
         rew += (self.dist_coeff * dists[-1])
         rew += other_survival_bonus
         rew -= (self.twonn_coeff * dists[-2])
@@ -288,21 +294,16 @@ class Trade(MultiAgentEnv):
                 symbol = action - (self.food_types * 2) - 4
                 assert symbol in range(self.vocab_size)
                 self.communications[agent][symbol] = 1
-            self.agent_food_counts[agent] = [max(x - 0.1, 0) for x in self.agent_food_counts[agent]]
+            self.agent_food_counts[agent] = [max(x - METABOLISM, 0) for x in self.agent_food_counts[agent]]
 
         self.update_dones()
 
 
         # Once agents complete all actions, add placed food to table
         #self.table = self.table + place_table
-        # RESET FOOD EVERY TEN ITERS
         self.steps += 1
         if self.respawn and self.steps % 20 == 0:
-            fc = 4
-            food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
-            for spawn_spot, (ft, fc) in zip(self.spawn_spots, food_counts):
-                fx, fy = choice(spawn_spot)
-                self.table[fx, fy, ft, len(self.agents)] = fc
+            self.spawn_food()
         #if self.steps == 30:
         #    self.table[0, 0, 0, len(self.agents)] = 10
         #    self.table[4, 4, 1, len(self.agents)] = 10
@@ -318,84 +319,6 @@ class Trade(MultiAgentEnv):
         infos = {}
         return obs, rewards, dones, infos
 
-class TradeCallback(DefaultCallbacks):
-
-    def on_episode_start(self, worker, base_env, policies, episode, **kwargs):
-        env = base_env.get_unwrapped()[0]
-        self.comm_history = [0 for i in range(env.vocab_size)]
-        self.agent_dists = []
-        self.action_counts = {act: 0 for act in env.MOVES}
-        self.punish_counts = {agent: 0 for agent in env.agents}
-
-    def on_episode_step(self, worker, base_env, policies, episode, **kwargs):
-        # there is a bug where on_episode_step gets called where it shouldn't
-        env = base_env.get_unwrapped()[0]
-        for agent, comm in env.communications.items():
-            if comm and max(comm) == 1:
-                symbol = comm.index(1)
-                self.comm_history[symbol] += 1
-        dists = {}
-        for i, a in enumerate(env.agents[:-1]):
-            for j, b in enumerate(env.agents[i+1:]):
-                if env.compute_done(a) or env.compute_done(b):
-                    continue
-                dists[(a,b)] = inv_dist(env.agent_positions[a], env.agent_positions[b])
-        self.agent_dists.append(sum(dists.values()) / max(1, len(dists.values())))
-        self.agent_grid = np.zeros(env.grid_size)
-        for a in env.agents:
-            if not env.compute_done(a):
-                self.action_counts[env.MOVES[episode.last_action_for(a)]] += 1
-                self.agent_grid[env.agent_positions[a]] += 1
-        for aid, a in enumerate(env.agents):
-            ax, ay = env.agent_positions[a]
-            self.punish_counts[a] += np.sum(self.agent_grid * env.punish_frames[aid])\
-                - env.punish_frames[aid, ax, ay]  # remove self-punish
-
-
-
-
-    def on_episode_end(self, worker, base_env, policies, episode, **kwargs,):
-        env = base_env.get_unwrapped()[0]
-        if not all(env.dones.values()):
-            return
-        episode.custom_metrics["grid_size"] = env.grid_size
-        for food, count in enumerate(env.num_exchanges):
-            episode.custom_metrics[f"exchange_{food}"] = count
-        for symbol, count in enumerate(self.comm_history):
-            episode.custom_metrics[f"comm_{symbol}"] = count
-        for agent in env.agents:
-            episode.custom_metrics[f"{agent}_punishes"] = self.punish_counts[agent]
-            episode.custom_metrics[f"{agent}_lifetime"] = env.lifetimes[agent]
-            episode.custom_metrics[f"{agent}_food_imbalance"] = \
-                max(env.agent_food_counts[agent]) / max(1, min(env.agent_food_counts[agent]))
-            total_agent_exchange = {"give": 0, "take": 0}
-            for other_agent in env.agents:
-                other_agent_exchange = {"give": 0, "take": 0}
-                for food in range(env.food_types):
-                    give = env.player_exchanges[(agent, other_agent, food)]
-                    take = env.player_exchanges[(other_agent, agent, food)]
-                    other_agent_exchange["give"] += give
-                    other_agent_exchange["take"] += take
-                    if other_agent != agent:
-                        total_agent_exchange["give"] += give
-                        total_agent_exchange["take"] += take
-                #episode.custom_metrics[f"{agent}_take_from_{other_agent}"] = other_agent_exchange["take"]
-                #episode.custom_metrics[f"{agent}_give_to_{other_agent}"] = other_agent_exchange["give"]
-                episode.custom_metrics[f"{agent}_mut_exchange_{other_agent}"] =\
-                   min(other_agent_exchange["take"], other_agent_exchange["give"])
-            #episode.custom_metrics[f"{agent}_take_from_all"] = total_agent_exchange["take"]
-            #episode.custom_metrics[f"{agent}_give_to_all"] = total_agent_exchange["give"]
-            episode.custom_metrics[f"{agent}_mut_exchange_total"] =\
-                min(total_agent_exchange["take"], total_agent_exchange["give"])
-            for food in range(env.food_types):
-                episode.custom_metrics[f"{agent}_PICK_{food}"] = env.picked_counts[agent][food]
-                episode.custom_metrics[f"{agent}_PLACE_{food}"] = env.placed_counts[agent][food]
-
-        episode.custom_metrics[f"avg_avg_dist"] = sum(self.agent_dists) / len(self.agent_dists)
-        total_number_of_actions = sum(self.action_counts.values())
-        if total_number_of_actions > 0:
-            for act, count in self.action_counts.items():
-                episode.custom_metrics[f"percent_{act}"] = count / total_number_of_actions
 
 
 

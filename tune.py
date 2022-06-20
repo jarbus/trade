@@ -1,14 +1,13 @@
-import torch
 import ray
 from args import get_args
 from ray import tune
 from ray.rllib.agents import ppo
 from ray.tune.registry import register_env
 from ray.rllib.policy.policy import PolicySpec
-from trade_v3 import Trade, TradeCallback
+from trade_v4 import Trade, TradeCallback
 from ray.tune.schedulers import PopulationBasedTraining
 import random
-from DIRS import *
+from DIRS import RESULTS_DIR
 
 
 
@@ -26,7 +25,6 @@ def generate_configs():
                   "move_coeff": args.move_coeff,
                   "dist_coeff": args.dist_coeff,
                   "death_prob": args.death_prob,
-                  "random_start": args.random_start,
                   "twonn_coeff": args.twonn_coeff,
                   "respawn": args.respawn,
                   "survival_bonus": args.survival_bonus,
@@ -34,7 +32,7 @@ def generate_configs():
                   "punish": args.punish,
                   "self_other_frames": args.self_other_frames,
                   "parameter_sharing": args.parameter_sharing,
-                  "full_random_start": args.full_random_start,
+                  "spawn_agents": args.spawn_agents,
                   "punish_coeff": args.punish_coeff,
                   "vocab_size": 0}
 
@@ -61,7 +59,7 @@ def generate_configs():
     # policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
     if args.parameter_sharing:
         policy = gen_policy(0)
-        policies = {f"pol1": policy}
+        policies = {"pol1": policy}
         def policy_mapping_fn(aid, **kwargs):
             return "pol1"
     else:
@@ -112,7 +110,7 @@ if __name__ == "__main__":
     if args.ip:
         ray.init(address=args.ip, _redis_password="longredispassword")
 
-    env_name = "trade_v3"
+    env_name = "trade_v4"
 
     register_env(env_name, lambda config: Trade(config))
 
@@ -126,7 +124,7 @@ if __name__ == "__main__":
         metric="episode_reward_mean",
         mode="max",
         resume=False,
-        num_samples=8,
+        num_samples=1,
         stop={"timesteps_total": args.num_steps},
         checkpoint_freq=args.checkpoint_interval,
         reuse_actors=True,
