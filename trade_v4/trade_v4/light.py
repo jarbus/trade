@@ -1,9 +1,9 @@
 import numpy as np
 import math
 
-FIRE_LIGHT_LEVEL = 0.1
-MAX_LIGHT_LEVEL = 1
-STARTING_LIGHT_LEVEL = 0
+FIRE_LIGHT_LEVEL:     float = 0.1
+MAX_LIGHT_LEVEL:      float = 1.0
+STARTING_LIGHT_LEVEL: float = 0.0
 
 class Light:
     def __init__(self, grid_size, interval):

@@ -2,7 +2,7 @@ import numpy as np
 import ray.rllib.agents.ppo as ppo
 from ray.tune.registry import register_env
 from ray.rllib.policy.policy import PolicySpec
-from trade_v3 import Trade
+from trade_v4 import Trade
 from tune import generate_configs
 from args import get_args
 import os
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     for i in range(0, N):
         f = open(os.path.join(path, f"{i}.out"), "w")
 
-        env_name = "trade_v3"
+        env_name = "trade_v4"
 
         register_env(env_name, lambda config: Trade(config))
 
