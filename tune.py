@@ -30,8 +30,6 @@ def generate_configs():
                   "survival_bonus": args.survival_bonus,
                   "health_baseline": args.health_baseline,
                   "punish": args.punish,
-                  "self_other_frames": args.self_other_frames,
-                  "parameter_sharing": args.parameter_sharing,
                   "spawn_agents": args.spawn_agents,
                   "punish_coeff": args.punish_coeff,
                   "vocab_size": 0}
@@ -57,16 +55,18 @@ def generate_configs():
         return PolicySpec(None, obs_space, act_space, config)
 
     # policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
-    if args.parameter_sharing:
+    if args.num_policies == 1:
         policy = gen_policy(0)
         policies = {"pol1": policy}
         def policy_mapping_fn(aid, **kwargs):
             return "pol1"
-    elif args.two_policies:
-        pol1, pol2 = gen_policy(0), gen_policy(1)
-        policies = {f"pol1": pol1, "pol2": pol2}
+
+    elif args.num_policies == 2:
+        pol1 = gen_policy(0)
+        pol2 = gen_policy(1)
+        policies = {"pol1": pol1, "pol2": pol2}
         def policy_mapping_fn(aid, **kwargs):
-            return "pol1" if aid in {"player_0", "player_1"} else  "pol2"
+            return "pol1" if aid in {"player_0", "player_1"} else "pol2"
     else:
         policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
         def policy_mapping_fn(aid, **kwargs):
