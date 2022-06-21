@@ -64,7 +64,7 @@ if __name__ == "__main__":
             f.write(f"--------STEP-{i}--------\n")
             test_env.render(out=f)
             for agent in obss.keys():
-                policy = trainer.get_policy("pol1")
+                policy = trainer.get_policy(policy_mapping_fn(agent))
                 actions[agent], states[agent], logits = policy.compute_single_action(obs=np.array(obss[agent]), state=states[agent], policy_id=agent)
                 actions[agent] = torch.tensor(actions[agent])
 

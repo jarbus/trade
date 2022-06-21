@@ -9,7 +9,11 @@ from ray.tune.schedulers import PopulationBasedTraining
 import random
 from DIRS import RESULTS_DIR
 
-
+POLICY_MAPPING_FN = {
+    1: lambda aid, **kwargs: "pol1",
+    2: lambda aid, **kwargs: "pol1" if aid in {"player_0", "player_1"} else "pol2",
+    4: lambda aid, **kwargs: aid
+}
 
 args = get_args()
 
@@ -55,24 +59,14 @@ def generate_configs():
         }
         return PolicySpec(None, obs_space, act_space, config)
 
-    # policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
-    if args.num_policies == 1:
-        policy = gen_policy(0)
-        policies = {"pol1": policy}
-        def policy_mapping_fn(aid, **kwargs):
-            return "pol1"
+    POLICY_SET = {
+        1: {"pol1": gen_policy(0)},
+        2: {"pol1": gen_policy(0), "pol2": gen_policy(1)},
+        4: {f"player_{a}": gen_policy(a) for a in range(num_agents)}
+    }
 
-    elif args.num_policies == 2:
-        pol1 = gen_policy(0)
-        pol2 = gen_policy(1)
-        policies = {"pol1": pol1, "pol2": pol2}
-        def policy_mapping_fn(aid, **kwargs):
-            return "pol1" if aid in {"player_0", "player_1"} else "pol2"
-    else:
-        policies = {f"player_{a}": gen_policy(a) for a in range(num_agents)}
-        def policy_mapping_fn(aid, **kwargs):
-            return aid
-    return env_config, policies, policy_mapping_fn
+
+    return env_config, POLICY_SET[args.num_policies], POLICY_MAPPING_FN[args.num_policies]
 
 
 
