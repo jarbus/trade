@@ -60,6 +60,7 @@ def generate_configs():
         policies = {"pol1": policy}
         def policy_mapping_fn(aid, **kwargs):
             return "pol1"
+
     elif args.num_policies == 2:
         pol1 = gen_policy(0)
         pol2 = gen_policy(1)
@@ -157,7 +158,7 @@ if __name__ == "__main__":
             "sgd_minibatch_size": batch_size,
             "train_batch_size": batch_size,
             'rollout_fragment_length': 50,
-            'lr': tune.choice([1e-04, 1e-05]),
+            'lr': tune.choice([1e-04]),
             # Method specific
             "multiagent": {
                 "policies": policies,
