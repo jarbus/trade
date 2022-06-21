@@ -5,13 +5,14 @@ from random import random, shuffle
 from math import floor
 from .utils import add_tup, directions, valid_pos, inv_dist, punish_region
 from pdb import set_trace as T
-from .light import Light, FIRE_LIGHT_LEVEL, MAX_LIGHT_LEVEL, STARTING_LIGHT_LEVEL
+from .light import Light
 from .spawners import CenterSpawner, FourCornerSpawner, RandomSpawner
 import sys
-from time import time
+from collections import defaultdict
 
 METABOLISM=0.1
 PLACE_AMOUNT = 0.5
+SCALE_DOWN = 30
 
 NUM_ITERS = 100
 ndir = len(directions)
@@ -31,7 +32,6 @@ class Trade(MultiAgentEnv):
         self.move_coeff            = env_config.get("move_coeff", 0.5)
         self.death_prob            = env_config.get("death_prob", 0.1)
         self.self_other_frames     = env_config.get("self_other_frames", False)
-        self.parameter_sharing     = env_config.get("parameter_sharing", False)
         self.day_night_cycle       = env_config.get("day_night_cycle", True)
         self.day_steps             = env_config.get("day_steps", 20)
         self.night_time_death_prob = env_config.get("night_time_death_prob", True)
@@ -42,15 +42,20 @@ class Trade(MultiAgentEnv):
         self.spawn_agents          = env_config.get("spawn-agents", True)
         self.twonn_coeff           = env_config.get("twonn_coeff", 0.0)
         self.health_baseline       = env_config.get("health_baseline", False)
+        self.policy_mapping_fn     = env_config.get("policy_mapping_fn", lambda x: "pol1")
         self.padded_grid_size      = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
         self.light                 = Light(self.grid_size, 0.1)
         super().__init__()
-        if self.self_other_frames:
-            #                 self, other pos   self, other foods
-            food_frame_and_agent_channels = 2 + (2*self.food_types)
-        else:
-            #                              agent_poses       agent foods
-            food_frame_and_agent_channels = num_agents + (self.food_types*num_agents)
+
+
+        self.possible_agents = ["player_" + str(r) for r in range(num_agents)]
+        self.agents = self.possible_agents[:]
+        self.agent_group_mapping = defaultdict(list)
+        for agent in self.agents:
+            self.agent_group_mapping[self.policy_mapping_fn(agent)].append(agent)
+        self.policies = list(self.agent_group_mapping.keys())
+        # (self + policies) * (food frames and pos frame)
+        food_frame_and_agent_channels = (len(self.agent_group_mapping.keys())+1) * (self.food_types+1)
         # x, y + agents_and_foods + food frames + comms
         self.channels = 2 + food_frame_and_agent_channels + (self.food_types) + (self.vocab_size) + int(self.punish) + int(self.day_night_cycle)
         self.agent_food_counts = dict()
@@ -75,8 +80,6 @@ class Trade(MultiAgentEnv):
         self.food_spawner = FourCornerSpawner(self.grid_size)
 
 
-        self.possible_agents = ["player_" + str(r) for r in range(num_agents)]
-        self.agents = self.possible_agents[:]
 
         self.action_space = Discrete(self.num_actions)
         self.obs_size = (self.channels, *add_tup(add_tup(self.window_size, self.window_size), (1, 1)))
@@ -125,7 +128,7 @@ class Trade(MultiAgentEnv):
             out.write(f"food{food}:\n {self.table[:,:,food].sum(axis=2)}\n")
         out.write(f"Total exchanged so far: {self.num_exchanges}\n")
         if self.day_night_cycle:
-            out.write(f"Light: {self.light.light_level}")
+            out.write(f"Light: {self.light.light_level}\n")
         for agent, comm in self.communications.items():
             if comm and max(comm) >= 1:
                 out.write(f"{agent} said {comm.index(1)}\n")
@@ -139,34 +142,26 @@ class Trade(MultiAgentEnv):
         miny, maxy = ay, ay+(2*wy)+1
         food_frames = self.table.sum(axis=3).transpose(2, 0, 1)  # frame for each food
         comm_frames = np.zeros((self.vocab_size, *self.grid_size), dtype=np.float32)
-        if self.self_other_frames:
-            self_frame = np.zeros(self.grid_size, dtype=np.float32)
-            other_frame = np.zeros(self.grid_size, dtype=np.float32)
-            other_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
-            self_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
-            self_frame[ax, ay] = 1
-        else:
-            agent_food_frames = np.zeros((self.food_types*len(self.agents), *self.grid_size), dtype=np.float32)
-            agent_frames = np.zeros((len(self.agents), *self.grid_size), dtype=np.float32)
+        self_pos_frame   = np.zeros(self.grid_size, dtype=np.float32)
+        self_pos_frame[ax, ay] = 1
+        self_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
+        pol_pos_frames   = {p: np.zeros(self.grid_size, dtype=np.float32) for p in self.policies}
+        pol_food_frames  = {p: np.zeros((self.food_types, *self.grid_size), dtype=np.float32) for p in self.policies}
         for i, a in enumerate(self.agents):
             if self.compute_done(a):
                 continue
             oax, oay = self.agent_positions[a]
             comm_frames[:, oax, oay] = self.communications[a]
-            if self.self_other_frames:
-                if a != agent:
-                    other_frame[oax, oay] += 1
-                    other_food_frames[:, oax, oay] += self.agent_food_counts[a]
-                else:
-                    self_food_frames[:,  oax, oay] += self.agent_food_counts[a]
-            else:
-                agent_food_frames[2*i:2*(i+1), oax, oay] = self.agent_food_counts[a]
-                agent_frames[i, oax, oay] = 1
 
-        if self.self_other_frames:
-            agent_and_food_frames = np.stack([self_frame, other_frame, *self_food_frames, *other_food_frames])
-        else:
-            agent_and_food_frames = np.stack([*agent_frames, *agent_food_frames])
+            if a != agent:
+                pol = self.policy_mapping_fn(a)
+                pol_pos_frames[pol][oax, oay] += 1
+                pol_food_frames[pol][:, oax, oay] += self.agent_food_counts[a]
+            else:
+                self_food_frames[:,  oax, oay] += self.agent_food_counts[a]
+
+        pol_frames = np.concatenate([np.stack([*pol_food_frames[p], pol_pos_frames[p]]) for p in self.policies])
+        agent_and_food_frames = np.stack([*pol_frames, self_pos_frame, *self_food_frames])
 
         if self.punish:
             pun_frames = np.sum(self.punish_frames, axis=0)[None, :, :]
@@ -174,7 +169,7 @@ class Trade(MultiAgentEnv):
             pun_frames = np.zeros((0, *self.grid_size), dtype=np.float32)
 
         if self.day_night_cycle:
-            light_frames = self.light.frame()[None, :, :]
+            light_frames = self.light.frame()[None, :, :] * SCALE_DOWN
         else:
             light_frames = np.zeros((0, *self.grid_size), dtype=np.float32)
 
@@ -185,7 +180,7 @@ class Trade(MultiAgentEnv):
         frames = np.stack([*food_frames, *agent_and_food_frames, xpos_frame, ypos_frame, *light_frames, *pun_frames, *comm_frames])
         padded_frames = np.full((frames.shape[0], *self.padded_grid_size), -1, dtype=np.float32)
         padded_frames[:, wx:(gx+wx), wy:(gy+wy)] = frames
-        obs = padded_frames[:, minx:maxx, miny:maxy] / 30
+        obs = padded_frames[:, minx:maxx, miny:maxy] / SCALE_DOWN
         return obs
 
     def compute_done(self, agent):
@@ -304,9 +299,6 @@ class Trade(MultiAgentEnv):
         self.steps += 1
         if self.respawn and self.steps % 20 == 0:
             self.spawn_food()
-        #if self.steps == 30:
-        #    self.table[0, 0, 0, len(self.agents)] = 10
-        #    self.table[4, 4, 1, len(self.agents)] = 10
 
         obs = {agent: self.compute_observation(agent) for agent in actions.keys()}
         dones = {agent: self.compute_done(agent) for agent in actions.keys()}
@@ -318,37 +310,3 @@ class Trade(MultiAgentEnv):
         dones = {**dones, "__all__": all(dones.values())}
         infos = {}
         return obs, rewards, dones, infos
-
-
-
-
-if __name__ == "__main__":
-    num_agents = 4
-    env_config = {"window": (2, 2),
-                  "grid": (5, 5),
-                  "food_types": 2,
-                  "num_agents": num_agents,
-                  "episode_length": 200,
-                  "vocab_size": 0}
-    tenv = Trade(env_config)
-    obs = tenv.reset()
-    start = time()
-    for i in range(100):
-        actions = {}
-        for agent in tenv.agents:
-            tenv.render()
-            for i, m in enumerate(tenv.MOVES):
-                print(f"{i, m}", end="")
-            print(f"\nAction for {agent}: ", end="")
-            action = int(input())
-            actions[agent] = action
-        obss, rews, dones, infos = tenv.step(actions)
-        # print("player_0 obs")
-        # print(obss["player_0"])
-        # print("player_1 obs")
-        # print(obss["player_1"])
-        if dones["__all__"]:
-            print("game over")
-
-            print(f"time: {time() - start}")
-            break

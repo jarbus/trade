@@ -26,7 +26,6 @@ oned_config = {
         "vocab_size": 0}
 
 def act(env, *acts):
-    assert len(acts) == len(env.agents)
     return {agent: env.MOVES.index(act) for agent, act in zip(env.agents, acts)}
 
 class TestTrade(unittest.TestCase):
@@ -81,11 +80,26 @@ class TestTrade(unittest.TestCase):
         self.assertAlmostEqual(fc[0][0] - METABOLISM + 1, env.agent_food_counts[p0][0])
         self.assertAlmostEqual(fc[1][1] - METABOLISM + 1, env.agent_food_counts[p1][1])
 
+
     def test_place(self):
         pass
 
     def test_light(self):
         pass
+
+    def test_all_functions_run(self):
+        env = Trade(oned_config)
+        env.reset()
+        env.seed()
+        env.spawn_food()
+        env.render()
+        env.compute_observation("player_0")
+        env.compute_done("player_0")
+        env.compute_reward("player_0")
+        env.compute_exchange_amount(0, 0, 0, 0)
+        env.compute_pick_amount(0, 0, 0, 0)
+        env.update_dones()
+        env.step(act(env, "NONE"))
 
 if __name__ == '__main__':
     unittest.main()
