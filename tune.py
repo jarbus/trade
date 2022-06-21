@@ -4,16 +4,11 @@ from ray import tune
 from ray.rllib.agents import ppo
 from ray.tune.registry import register_env
 from ray.rllib.policy.policy import PolicySpec
-from trade_v4 import Trade, TradeCallback
+from trade_v4 import Trade, TradeCallback, POLICY_MAPPING_FN
 from ray.tune.schedulers import PopulationBasedTraining
 import random
 from DIRS import RESULTS_DIR
 
-POLICY_MAPPING_FN = {
-    1: lambda aid, **kwargs: "pol1",
-    2: lambda aid, **kwargs: "pol1" if aid in {"player_0", "player_1"} else "pol2",
-    4: lambda aid, **kwargs: aid
-}
 
 args = get_args()
 

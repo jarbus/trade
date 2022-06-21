@@ -18,3 +18,10 @@ def punish_region(x, y, gx, gy):
     x_region = slice(max(0, x-window), min(gx, x+window))
     y_region = slice(max(0, y-window), min(gy, y+window))
     return x_region, y_region
+
+
+POLICY_MAPPING_FN = {
+    1: lambda aid, **kwargs: "pol1",
+    2: lambda aid, **kwargs: "pol1" if aid in {"player_0", "player_1"} else "pol2",
+    4: lambda aid, **kwargs: aid
+}
