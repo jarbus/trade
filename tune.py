@@ -19,25 +19,26 @@ args = get_args()
 
 def generate_configs():
     num_agents = 4
-# env_config = {"food_types": num_agents, "num_agents": num_agents, "episode_length": 20, "vocab_size": 0}
-
     env_config = {"window": (3, 3),
-                  "grid": (args.gx, args.gy),
-                  "food_types": 2,
-                  "num_agents": num_agents,
-                  "episode_length": 200,
-                  "move_coeff": args.move_coeff,
-                  "dist_coeff": args.dist_coeff,
-                  "death_prob": args.death_prob,
-                  "twonn_coeff": args.twonn_coeff,
-                  "respawn": args.respawn,
-                  "survival_bonus": args.survival_bonus,
-                  "health_baseline": args.health_baseline,
-                  "punish": args.punish,
-                  "spawn_agents": args.spawn_agents,
-                  "punish_coeff": args.punish_coeff,
-                  "day_night_cycle": args.day_night_cycle,
-                  "vocab_size": 0}
+        "grid": (args.gx, args.gy),
+        "food_types": 2,
+        "num_agents": num_agents,
+        "episode_length": 200,
+        "move_coeff": args.move_coeff,
+        "dist_coeff": args.dist_coeff,
+        "death_prob": args.death_prob,
+        "twonn_coeff": args.twonn_coeff,
+        "respawn": args.respawn,
+        "survival_bonus": args.survival_bonus,
+        "health_baseline": args.health_baseline,
+        "punish": args.punish,
+        "spawn_agents": args.spawn_agents,
+        "punish_coeff": args.punish_coeff,
+        "day_night_cycle": args.day_night_cycle,
+        "policy_mapping_fn": POLICY_MAPPING_FN[args.num_policies],
+        "vocab_size": 0} 
+
+
 
     test_env = Trade(env_config)
     obs_space = test_env.observation_space
@@ -46,7 +47,6 @@ def generate_configs():
     def gen_policy(i):
         config = {
             "model": {
-                # Change individual keys in that dict by overriding them, e.g.
                 "conv_filters": [[64, [3, 3], 1], [64, [3, 3], 1], [64, [3, 3], 1]],
                 "conv_activation": "relu",
                 "post_fcnet_hiddens": [64, 64],
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         metric="episode_reward_mean",
         mode="max",
         resume=False,
-        num_samples=1,
+        num_samples=8,
         stop={"timesteps_total": args.num_steps},
         checkpoint_freq=args.checkpoint_interval,
         reuse_actors=True,
