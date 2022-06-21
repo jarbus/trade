@@ -32,6 +32,7 @@ def generate_configs():
                   "punish": args.punish,
                   "spawn_agents": args.spawn_agents,
                   "punish_coeff": args.punish_coeff,
+                  "day_night_cycle": args.day_night_cycle,
                   "vocab_size": 0}
 
     test_env = Trade(env_config)
