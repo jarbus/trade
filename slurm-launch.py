@@ -9,7 +9,7 @@ import sys
 import time
 
 from pathlib import Path
-from DIRS import *
+from DIRS import TRADE_DIR, RUN_DIR
 
 template_file = f"{TRADE_DIR}/slurm-template.sh"
 JOB_NAME = "${JOB_NAME}"
