@@ -1,5 +1,5 @@
 import numpy as np
-from trade_v4 import Trade, METABOLISM, PLACE_AMOUNT
+from trade_v4 import Trade, METABOLISM, PLACE_AMOUNT, POLICY_MAPPING_FN
 import unittest
 
 """
@@ -23,6 +23,7 @@ oned_config = {
         "survival_bonus": 1,
         "punish": False,
         "punish_coeff": 2,
+        "policy_mapping_fn": POLICY_MAPPING_FN[1],
         "vocab_size": 0}
 
 def act(env, *acts):
@@ -85,7 +86,60 @@ class TestTrade(unittest.TestCase):
         pass
 
     def test_light(self):
-        pass
+        # Create config with 7x7 grid
+        config = oned_config.copy()
+        config["grid"] = (7, 7)
+        env = Trade(config)
+        env.reset()
+        # Check that light.contains returns True for day time
+        env.light.light_level = 0.5
+        self.assertTrue(env.light.contains((0, 0)))
+        # Check that light.contains returns False for night time
+        env.light.light_level = -1
+        self.assertFalse(env.light.contains((0, 0)))
+        # Check that light.contains returns True for night time near center
+        self.assertTrue(env.light.contains((3, 3)))
+
+
+
+
+
+    def test_policy_frames(self):
+        # Confirm that the sum of policy frames across different policy splits is the same
+        pol_conf = oned_config.copy()
+        pol_conf["num_agents"] = 4
+        pol_conf["window"] = (1,1)
+        obss = {}
+        for num_policies in [1, 2, 4]:
+            pol_conf["policy_mapping_fn"] = POLICY_MAPPING_FN[num_policies]
+            env = Trade(pol_conf)
+            env.reset()
+            env.agent_positions["player_0"] = (0,0)
+            env.agent_positions["player_1"] = (0,0)
+            env.agent_positions["player_2"] = (0,0)
+            env.agent_positions["player_3"] = (0,0)
+            obs, _, _, _ = env.step(act(env, "NONE", "NONE", "NONE", "NONE"))
+            env.table = np.zeros(env.table.shape)
+            obss[num_policies] = obs
+        frames_per_policy = 3
+        # confirm observations have expected shapes
+        self.assertEquals(obss[2]["player_0"].shape[0], obss[1]["player_0"].shape[0] + frames_per_policy)
+        self.assertEquals(obss[4]["player_0"].shape[0], obss[1]["player_0"].shape[0] + 3*frames_per_policy)
+
+        # confirm self frames are all equal
+        def pol_slice(i):
+            return slice(2+i*frames_per_policy, 2+(i+1)*frames_per_policy)
+        self.assertTrue(np.array_equal(obss[1]["player_0"][pol_slice(1)], obss[2]["player_0"][pol_slice(2)]))
+        self.assertTrue(np.array_equal(obss[1]["player_0"][pol_slice(1)], obss[4]["player_0"][pol_slice(4)]))
+
+        def other_pols(i, n):
+            return slice(2+i*frames_per_policy, 2+(i+n)*frames_per_policy)
+        obs1 = np.where(obss[1]["player_0"][other_pols(0, 1)] < 0, 0, obss[1]["player_0"][other_pols(0, 1)]).sum(axis=0)
+        obs2 = np.where(obss[2]["player_0"][other_pols(0, 2)] < 0, 0, obss[2]["player_0"][other_pols(0, 2)]).sum(axis=0)
+        obs4 = np.where(obss[4]["player_0"][other_pols(0, 4)] < 0, 0, obss[4]["player_0"][other_pols(0, 4)]).sum(axis=0)
+        self.assertTrue(np.array_equal(obs2, obs4))
+        self.assertTrue(np.array_equal(obs1, obs2))
+
 
     def test_all_functions_run(self):
         env = Trade(oned_config)

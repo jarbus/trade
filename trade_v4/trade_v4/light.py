@@ -20,7 +20,7 @@ class Light:
         self.night = True
 
     def contains(self, pos):
-        if self.light_level > 0:
+        if self.light_level >= 0:
             return True
         if pos[0] in self.fire_range[0] and pos[1] in self.fire_range[1]:
             return True
