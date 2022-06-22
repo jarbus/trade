@@ -122,6 +122,8 @@ if __name__ == "__main__":
         num_samples=8,
         stop={"timesteps_total": args.num_steps},
         checkpoint_freq=args.checkpoint_interval,
+        keep_checkpoints_num=3,
+        checkpoint_score_attr="reward_mean",
         reuse_actors=True,
         local_dir=f"{RESULTS_DIR}/{args.class_name}",
         config={
