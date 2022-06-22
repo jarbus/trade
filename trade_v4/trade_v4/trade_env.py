@@ -42,8 +42,10 @@ class Trade(MultiAgentEnv):
         self.twonn_coeff           = env_config.get("twonn_coeff", 0.0)
         self.health_baseline       = env_config.get("health_baseline", False)
         self.policy_mapping_fn     = env_config.get("policy_mapping_fn")
+        self.food_env_spawn        = env_config.get("food_env_spawn")
+        self.food_agent_start      = env_config.get("food_agent_start")
         self.padded_grid_size      = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
-        self.light                 = Light(self.grid_size, 0.1)
+        self.light                 = Light(self.grid_size, 2/self.day_steps)
         super().__init__()
 
 
@@ -90,7 +92,7 @@ class Trade(MultiAgentEnv):
             np.random.seed(seed)
 
     def spawn_food(self):
-        fc = 6 if self.respawn else 10
+        fc = self.food_env_spawn if self.respawn else 10
         food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
         spawn_spots = self.food_spawner.gen_poses()
         for spawn_spot, (ft, fc) in zip(spawn_spots, food_counts):
@@ -117,7 +119,7 @@ class Trade(MultiAgentEnv):
         self.num_exchanges = [0]*self.food_types
         self.player_exchanges = {(a, b, f): 0 for a in self.agents for b in self.agents for f in range(self.food_types)}
         self.lifetimes = {agent: 0 for agent in self.agents}
-        self.agent_food_counts = {agent: [1, 1] for agent in self.agents}
+        self.agent_food_counts = {agent: [self.food_agent_start for f in range(self.food_types)] for agent in self.agents}
         return {agent: self.compute_observation(agent) for agent in self.agents}
 
     def render(self, mode="human", out=sys.stdout):
