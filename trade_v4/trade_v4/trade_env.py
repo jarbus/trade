@@ -127,7 +127,7 @@ class Trade(MultiAgentEnv):
             out.write(f"food{food}:\n {self.table[:,:,food].sum(axis=2)}\n")
         out.write(f"Total exchanged so far: {self.num_exchanges}\n")
         if self.day_night_cycle:
-            out.write(f"Light: {round(self.light.light_level, 2)}\n")
+            out.write(f"Light:\n {self.light.frame()}\n")
         for agent, comm in self.communications.items():
             if comm and max(comm) >= 1:
                 out.write(f"{agent} said {comm.index(1)}\n")
