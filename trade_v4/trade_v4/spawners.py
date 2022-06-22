@@ -30,12 +30,14 @@ class CenterSpawner(BaseSpawnGenerator):
         self.gx, self.gy = grid_size
         cx = (self.gx // 2)
         cy = (self.gy // 2)
-        x_poses = [cx-1, cx, cx+1]
-        y_poses = [cy-1, cy, cy+1]
-        self.poses = list(filter(lambda pos: valid_pos(pos, self.grid_size), product(x_poses, y_poses)))
+        self.poses = [(cx-1, cy-1), (cx-1, cy+1), (cx+1,cy-1), (cx+1, cy+1)]
+        # x_poses = [cx-1, cx, cx+1]
+        # y_poses = [cy-1, cy, cy+1]
+        # self.poses = list(filter(lambda pos: valid_pos(pos, self.grid_size), product(x_poses, y_poses)))
 
     def gen_poses(self, n=4):
-        return [choice(self.poses) for _ in range(n)]
+        shuffle(self.poses)
+        return self.poses
 
 class FourCornerSpawner(BaseSpawnGenerator):
     def __init__(self, grid_size):

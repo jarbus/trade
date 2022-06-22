@@ -11,7 +11,7 @@ p0 = "player_0"
 p1 = "player_1"
 oned_config = {
         "window": (1, 1),
-        "grid": (2, 2),
+        "grid": (3, 3),
         "food_types": 2,
         "num_agents": 2,
         "episode_length": 200,
