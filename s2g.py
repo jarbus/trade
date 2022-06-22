@@ -4,6 +4,8 @@ import argparse
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
 
+
+
 #plt.style.use('dark_background')
 parser = argparse.ArgumentParser(description="Convert serve file to gif")
 parser.add_argument("file", type=str)
@@ -12,7 +14,7 @@ args = parser.parse_args()
 player_expr = r"(player_\d): \((\d), (\d)\) \[(.*), (.*)\] (.*)$"
 exchange_expr = r"Exchange: (player_\d) gave (\S*) of food (\d) to (player_\d)"
 food_expr = r"food(\d):"
-light_expr = r"Light: (.*)$"
+light_expr = r"Light:$"
 
 @dataclass
 class Player:
@@ -31,7 +33,7 @@ class Step:
     players: list[Player]
     exchange_messages: list[str]
     food_grid: list[list[float]]
-    light_level: float
+    light_grid: list[list[float]]
 
 
 all_exchange_messages = []
@@ -40,27 +42,41 @@ food_colors = ["red", "yellow"]
 offv = 0.01
 player_offsets = (0, offv), (offv, 0), (0, -offv), (-offv, 0)
 food_offsets = (offv, offv), (-offv, -offv)
-grid_offset = (0.05, 0.15)
+grid_offset = (0.01, 0.01)
 def add_tuple(a, b):
     return tuple(i + j for i, j in zip(a, b))
 
 @gif.frame
 def plot_step(step: Step):
+
     fig = plt.figure()
     vs = 0.6
     hs = 0.6
     #axes.append(fig.add_axes([x, y, w, h]))
     grid = fig.add_axes([0.05, 0.15, vs - 0.1, 0.7])
-    grid.set_facecolor(f'{(float(step.light_level) + 1) / 2}')
+    #grid.set_facecolor(f'{(float(step.light_level) + 1) / 2}')
     player_info = fig.add_axes([vs, hs, 1-vs, 1-hs])
     exchange_info = fig.add_axes([vs, 0, 1-vs, hs])
+    scale = len(step.food_grid[0])
 
     for ax in [grid, player_info, exchange_info]:
         ax.set_xticks([])
         ax.set_yticks([])
 
     fig.text(0, 0.95, f"Step {step.idx}", fontsize=12, wrap=True)
-    scale = len(step.food_grid[0])
+    for i, row in enumerate(step.light_grid[0]):
+        for j, col in enumerate(row):
+            l_pos = (i/scale, j/scale)
+            l_pos = add_tuple(l_pos, grid_offset)
+            # Add a square at l_pos
+            c = (col + 1)/2
+            rect = plt.Rectangle(l_pos, 1/scale, 1/scale, color=(c, c, c), fill=True)
+            grid.add_patch(rect)
+
+
+
+
+
     fig.text(vs + 0.05, 1-0.05, "Player          fc0     fc1   done")
     fig.text(vs + 0.05, 1-0.07, "-----------------------------------------")
     for i, message in enumerate(all_exchange_messages[-18:]):
@@ -88,6 +104,7 @@ def plot_step(step: Step):
                 grid.add_patch(circ)
 
 
+
 with open(args.file, "r") as file:
     lines = file.readlines()
     steps = []
@@ -103,10 +120,11 @@ for i in range(len(steps)-1):
 frames = []
 
 num_steps = len(step_slices)
-num_steps = 10  # len(step_slices)
+# num_steps = 10  # len(step_slices)
 for i in range(num_steps):
-    step = Step(i, [], [], [], 1)
+    step = Step(i, [], [], [], [])
     food = 0
+    grid = step.food_grid
     for line in lines[step_slices[i]]:
         if m := re.match(player_expr, line):
             player, x, y, *ft, done = m.groups()
@@ -121,13 +139,16 @@ for i in range(num_steps):
         if m := re.match(food_expr, line):
             food = m.groups()
             step.food_grid.append([])
+            grid = step.food_grid
+
 
         if m := re.match(light_expr, line):
-            light = m.groups()[0]
-            step.light_level = light
+            # light = m.groups()[0]
+            step.light_grid.append([])
+            grid = step.light_grid
         # Food
         if line.strip().startswith("["):
-            step.food_grid[-1].append([float(f) for f in line.strip().replace("[", "").replace("]", "").split()])
+            grid[-1].append([float(f) for f in line.strip().replace("[", "").replace("]", "").split()])
 
     frame = plot_step(step)
     frames.append(frame)
