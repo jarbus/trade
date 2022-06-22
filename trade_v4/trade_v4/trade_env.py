@@ -52,7 +52,7 @@ class Trade(MultiAgentEnv):
         self.agent_group_mapping = defaultdict(list)
         for agent in self.agents:
             self.agent_group_mapping[self.policy_mapping_fn(agent)].append(agent)
-        self.policies = list(self.agent_group_mapping.keys())
+        self.policies = sorted(list(self.agent_group_mapping.keys()))
         # (self + policies) * (food frames and pos frame)
         food_frame_and_agent_channels = (len(self.agent_group_mapping.keys())+1) * (self.food_types+1)
         # x, y + agents_and_foods + food frames + comms
