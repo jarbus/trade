@@ -52,7 +52,7 @@ class Trade(MultiAgentEnv):
         self.agent_group_mapping = defaultdict(list)
         for agent in self.agents:
             self.agent_group_mapping[self.policy_mapping_fn(agent)].append(agent)
-        self.policies = list(self.agent_group_mapping.keys())
+        self.policies = sorted(list(self.agent_group_mapping.keys()))
         # (self + policies) * (food frames and pos frame)
         food_frame_and_agent_channels = (len(self.agent_group_mapping.keys())+1) * (self.food_types+1)
         # x, y + agents_and_foods + food frames + comms
@@ -90,7 +90,7 @@ class Trade(MultiAgentEnv):
             np.random.seed(seed)
 
     def spawn_food(self):
-        fc = 4 if self.respawn else 10
+        fc = 6 if self.respawn else 10
         food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
         spawn_spots = self.food_spawner.gen_poses()
         for spawn_spot, (ft, fc) in zip(spawn_spots, food_counts):
@@ -127,7 +127,7 @@ class Trade(MultiAgentEnv):
             out.write(f"food{food}:\n {self.table[:,:,food].sum(axis=2)}\n")
         out.write(f"Total exchanged so far: {self.num_exchanges}\n")
         if self.day_night_cycle:
-            out.write(f"Light:\n {self.light.frame()}\n")
+            out.write(f"Light:\n {np.round_(self.light.frame(), 2)}\n")
         for agent, comm in self.communications.items():
             if comm and max(comm) >= 1:
                 out.write(f"{agent} said {comm.index(1)}\n")
