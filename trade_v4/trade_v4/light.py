@@ -8,7 +8,7 @@ STARTING_LIGHT_LEVEL: float = 0.0
 class Light:
     def __init__(self, grid_size, interval):
         gx, gy = self.grid_size = grid_size
-        tx, ty = tuple([(gx//2)-1, ((gx//2)+1)]), tuple([(gy//2)-1, ((gy//2)+1)])
+        tx, ty = tuple([(gx//2)-1, ((gx//2)+2)]), tuple([(gy//2)-1, ((gy//2)+2)])
         self.fire_slice = slice(*tx), slice(*ty)
         self.fire_range = range(*tx), range(*ty)
         self.light_level = 0
