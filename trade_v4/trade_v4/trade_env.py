@@ -90,7 +90,7 @@ class Trade(MultiAgentEnv):
             np.random.seed(seed)
 
     def spawn_food(self):
-        fc = 4 if self.respawn else 10
+        fc = 6 if self.respawn else 10
         food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
         spawn_spots = self.food_spawner.gen_poses()
         for spawn_spot, (ft, fc) in zip(spawn_spots, food_counts):
