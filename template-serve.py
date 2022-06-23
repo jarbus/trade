@@ -9,7 +9,7 @@ import os
 import torch
 
 args = get_args()
-N = 20
+N = 10
 if __name__ == "__main__":
     path = f"/home/garbus/trade/serves"
     for name in ["CLASS_NAME", "EXP_NAME", "TRIAL_NAME", "CHECK_NAME"]:
@@ -60,7 +60,7 @@ if __name__ == "__main__":
             states[agent] = policy.get_initial_state()
 
         actions = {agent: None for agent in obss.keys()}
-        for i in range(100):
+        for i in range(200):
             f.write(f"--------STEP-{i}--------\n")
             test_env.render(out=f)
             for agent in obss.keys():
@@ -80,4 +80,5 @@ if __name__ == "__main__":
                 test_env.render(out=f)
                 f.write("game over\n")
                 break
+            print("END OF LOOP")
         f.close()
