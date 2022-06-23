@@ -56,7 +56,7 @@ if __name__ == "__main__":
         exchanges = test_env.player_exchanges.copy()
         states = {}
         for agent in obss.keys():
-            policy = trainer.get_policy("pol1")
+            policy = trainer.get_policy(policy_mapping_fn(agent))
             states[agent] = policy.get_initial_state()
 
         actions = {agent: None for agent in obss.keys()}
