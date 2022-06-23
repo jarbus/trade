@@ -251,7 +251,7 @@ class Trade(MultiAgentEnv):
         random_order = list(actions.keys())
         shuffle(random_order)
         # placed goods will not be available until next turn
-        #place_table = np.zeros(self.table.shape, dtype=np.float32)
+        place_table = np.zeros(self.table.shape, dtype=np.float32)
         gx, gy = self.grid_size
         for agent in random_order:
             action = actions[agent]
@@ -283,7 +283,7 @@ class Trade(MultiAgentEnv):
                 elif self.agent_food_counts[agent][food] >= PLACE_AMOUNT:
                     actual_place_amount = PLACE_AMOUNT
                     self.agent_food_counts[agent][food] -= actual_place_amount
-                    self.table[x, y, food, aid] += actual_place_amount
+                    place_table[x, y, food, aid] += actual_place_amount
                     self.placed_counts[agent][food] += actual_place_amount
             # last action is noop
             elif action in range(4 + self.food_types * 2 + int(self.punish), self.num_actions-1):
@@ -296,7 +296,7 @@ class Trade(MultiAgentEnv):
 
 
         # Once agents complete all actions, add placed food to table
-        #self.table = self.table + place_table
+        self.table = self.table + place_table
         self.steps += 1
         if self.respawn and self.steps % 20 == 0:
             self.spawn_food()
