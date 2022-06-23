@@ -19,8 +19,8 @@ light_expr = r"Light:$"
 @dataclass
 class Player:
     name: str
-    pos: tuple[int, int]
-    food_count: tuple[float, float]
+    pos: tuple[int]
+    food_count: tuple[float]
     done: bool
 
     def __str__(self):
