@@ -3,6 +3,7 @@ import gif
 import argparse
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
+from typing import Tuple, List
 
 
 
@@ -19,8 +20,8 @@ light_expr = r"Light:$"
 @dataclass
 class Player:
     name: str
-    pos: tuple[int]
-    food_count: tuple[float]
+    pos: Tuple[int, int]
+    food_count: Tuple[float]
     done: bool
 
     def __str__(self):
@@ -30,10 +31,10 @@ class Player:
 @dataclass
 class Step:
     idx: int
-    players: list[Player]
-    exchange_messages: list[str]
-    food_grid: list[list[float]]
-    light_grid: list[list[float]]
+    players: List[Player]
+    exchange_messages: List[str]
+    food_grid: List[List[float]]
+    light_grid: List[List[float]]
 
 
 all_exchange_messages = []
