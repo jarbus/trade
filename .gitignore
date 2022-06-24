@@ -2,3 +2,9 @@
 *.arg
 *.out
 *.gif
+results*
+serves*
+runs*
+arg_files*
+DIRS.py
+docs*
