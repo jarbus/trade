@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
         trainer.restore("CHECKPOINT_PATH")
         obss = test_env.reset()
-        exchanges = test_env.player_exchanges.copy()
+        exchanges = test_env.mc.player_exchanges.copy()
         states = {}
         for agent in obss.keys():
             policy = trainer.get_policy(policy_mapping_fn(agent))
@@ -69,12 +69,12 @@ if __name__ == "__main__":
                 actions[agent] = torch.tensor(actions[agent])
 
             obss, rews, dones, infos = test_env.step({agent: action for agent, action in actions.items() if not test_env.compute_done(agent)})
-            for key in test_env.player_exchanges:
-                if test_env.player_exchanges[key] > exchanges[key]:
+            for key in test_env.mc.player_exchanges:
+                if test_env.mc.player_exchanges[key] > exchanges[key]:
                     giver, taker, food_type = key
-                    amount = test_env.player_exchanges[key] - exchanges[key]
+                    amount = test_env.mc.player_exchanges[key] - exchanges[key]
                     f.write(f"Exchange: {giver} gave {amount} of food {food_type} to {taker}\n")
-            exchanges = test_env.player_exchanges.copy()
+            exchanges = test_env.mc.player_exchanges.copy()
             if dones["__all__"]:
                 f.write("--------FINAL-STEP--------\n")
                 test_env.render(out=f)
