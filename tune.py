@@ -122,7 +122,7 @@ if __name__ == "__main__":
         metric="episode_reward_mean",
         mode="max",
         resume=False,
-        num_samples=8,
+        num_samples=args.num_samples,
         stop={"timesteps_total": args.num_steps},
         checkpoint_freq=args.checkpoint_interval,
         keep_checkpoints_num=3,
