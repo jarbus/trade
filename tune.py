@@ -18,7 +18,7 @@ def generate_configs():
         "grid": (args.gx, args.gy),
         "food_types": 2,
         "num_agents": num_agents,
-        "episode_length": 200,
+        "episode_length": args.episode_length,
         "move_coeff": args.move_coeff,
         "dist_coeff": args.dist_coeff,
         "death_prob": args.death_prob,

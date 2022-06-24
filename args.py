@@ -6,6 +6,7 @@ def get_args():
     parser.add_argument('--ip', type=str)
     parser.add_argument('--name', type=str, default="test")
     parser.add_argument('--num-samples', type=int, default=8)
+    parser.add_argument('--episode-length', type=int, default=200)
     parser.add_argument('--class-name', type=str, default="class")
     parser.add_argument('--spawn-agents', type=str, help="[center, corner]")
     parser.add_argument('--batch-size', type=int, default=500)
