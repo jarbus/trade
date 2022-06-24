@@ -40,21 +40,21 @@ class TradeCallback(DefaultCallbacks):
         if not all(env.dones.values()):
             return
         episode.custom_metrics["grid_size"] = env.grid_size
-        for food, count in enumerate(env.num_exchanges):
+        for food, count in enumerate(env.mc.num_exchanges):
             episode.custom_metrics[f"exchange_{food}"] = count
         for symbol, count in enumerate(self.comm_history):
             episode.custom_metrics[f"comm_{symbol}"] = count
         for agent in env.agents:
             episode.custom_metrics[f"{agent}_punishes"] = self.punish_counts[agent]
-            episode.custom_metrics[f"{agent}_lifetime"] = env.lifetimes[agent]
+            episode.custom_metrics[f"{agent}_lifetime"] = env.mc.lifetimes[agent]
             episode.custom_metrics[f"{agent}_food_imbalance"] = \
                 max(env.agent_food_counts[agent]) / max(1, min(env.agent_food_counts[agent]))
             total_agent_exchange = {"give": 0, "take": 0}
             for other_agent in env.agents:
                 other_agent_exchange = {"give": 0, "take": 0}
                 for food in range(env.food_types):
-                    give = env.player_exchanges[(agent, other_agent, food)]
-                    take = env.player_exchanges[(other_agent, agent, food)]
+                    give = env.mc.player_exchanges[(agent, other_agent, food)]
+                    take = env.mc.player_exchanges[(other_agent, agent, food)]
                     other_agent_exchange["give"] += give
                     other_agent_exchange["take"] += take
                     if other_agent != agent:
@@ -70,8 +70,8 @@ class TradeCallback(DefaultCallbacks):
             episode.custom_metrics[f"{agent}_mut_exchange_total"] =\
                 min(total_agent_exchange["take"], total_agent_exchange["give"])
             for food in range(env.food_types):
-                episode.custom_metrics[f"{agent}_PICK_{food}"] = env.picked_counts[agent][food]
-                episode.custom_metrics[f"{agent}_PLACE_{food}"] = env.placed_counts[agent][food]
+                episode.custom_metrics[f"{agent}_PICK_{food}"] = env.mc.picked_counts[agent][food]
+                episode.custom_metrics[f"{agent}_PLACE_{food}"] = env.mc.placed_counts[agent][food]
 
         episode.custom_metrics["avg_avg_dist"] = sum(self.agent_dists) / len(self.agent_dists)
         total_number_of_actions = sum(self.action_counts.values())

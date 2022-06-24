@@ -10,6 +10,47 @@ from .spawners import CenterSpawner, FourCornerSpawner, RandomSpawner
 import sys
 from collections import defaultdict
 
+
+class TradeMetricCollector():
+    def __init__(self, env):
+        self.rew_health               = 0
+        self.rew_nn                   = 0
+        self.rew_twonn                = 0
+        self.rew_other_survival_bonus = 0
+        self.rew_pun                  = 0
+        self.rew_mov                  = 0
+
+        self.num_exchanges = [0]*env.food_types
+        self.picked_counts = {agent: [0] * env.food_types for agent in env.agents}
+        self.placed_counts = {agent: [0] * env.food_types for agent in env.agents}
+        self.player_exchanges = {(a, b, f): 0 for a in env.agents for b in env.agents for f in range(env.food_types)}
+        self.lifetimes = {agent: 0 for agent in env.agents}
+
+    def collect_lifetimes(self, dones):
+        for agent, done in dones.items():
+            if not done:
+                self.lifetimes[agent] += 1
+
+    def collect_place(self, env, agent, food, actual_place_amount):
+        self.placed_counts[agent][food] += actual_place_amount
+
+    def collect_pick(self, env, agent, x, y, food, agent_id):
+        exchange_amount = env.compute_exchange_amount(x, y, food, agent_id)
+        if exchange_amount > 0:
+            for i, other_agent in enumerate(env.agents):
+                self.player_exchanges[(other_agent, agent, food)] += env.table[x, y, food, i]
+        self.num_exchanges[food] += exchange_amount
+        self.picked_counts[agent][food] += env.compute_pick_amount(x, y, food, agent_id)
+        pass
+
+    def collect_rew(self, env, health, nn, twonn, other_survival_bonus, pun_rew, mov_rew):
+        self.rew_health               += health
+        self.rew_nn                   += nn
+        self.rew_twonn                += twonn
+        self.rew_other_survival_bonus += other_survival_bonus
+        self.rew_pun                  += pun_rew
+        self.rew_mov                  += mov_rew
+
 METABOLISM=0.1
 PLACE_AMOUNT = 0.5
 SCALE_DOWN = 30
@@ -68,9 +109,9 @@ class Trade(MultiAgentEnv):
         self.MOVES.extend([f"COMM_{c}" for c in range(self.vocab_size)])
         self.MOVES.append("NONE")
         self.num_actions = len(self.MOVES)
-        self.num_exchanges = []
         self.communications = {}
 
+        # TODO make this a dict
         if self.spawn_agents == "center":
             self.agent_spawner = CenterSpawner(self.grid_size)
         elif self.spawn_agents == "corner":
@@ -104,8 +145,6 @@ class Trade(MultiAgentEnv):
         self.agents = self.possible_agents[:]
         self.dones = {agent: False for agent in self.agents}
         self.moved_last_turn = {agent: False for agent in self.agents}
-        self.picked_counts = {agent: [0] * self.food_types for agent in self.agents}
-        self.placed_counts = {agent: [0] * self.food_types for agent in self.agents}
         gx, gy = self.grid_size
         # use the last slot in the agents dimension to specify naturally spawning food
         self.table = np.zeros((*self.grid_size, self.food_types, len(self.agents)+1), dtype=np.float32)
@@ -116,10 +155,8 @@ class Trade(MultiAgentEnv):
         self.agent_positions = {agent: spawn_spot for agent, spawn_spot in zip(self.agents, spawn_spots)}
         self.steps = 0
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
-        self.num_exchanges = [0]*self.food_types
-        self.player_exchanges = {(a, b, f): 0 for a in self.agents for b in self.agents for f in range(self.food_types)}
-        self.lifetimes = {agent: 0 for agent in self.agents}
         self.agent_food_counts = {agent: [self.food_agent_start for f in range(self.food_types)] for agent in self.agents}
+        self.mc = TradeMetricCollector(self)
         return {agent: self.compute_observation(agent) for agent in self.agents}
 
     def render(self, mode="human", out=sys.stdout):
@@ -127,7 +164,7 @@ class Trade(MultiAgentEnv):
             out.write(f"{agent}: {self.agent_positions[agent]} {[round(fc, 2) for fc in self.agent_food_counts[agent]]} {self.compute_done(agent)}\n")
         for food in range(self.food_types):
             out.write(f"food{food}:\n {self.table[:,:,food].sum(axis=2)}\n")
-        out.write(f"Total exchanged so far: {self.num_exchanges}\n")
+        out.write(f"Total exchanged so far: {self.mc.num_exchanges}\n")
         if self.day_night_cycle:
             out.write(f"Light:\n {np.round_(self.light.frame(), 2)}\n")
         for agent, comm in self.communications.items():
@@ -202,26 +239,25 @@ class Trade(MultiAgentEnv):
         punishment = 0
         for aid, a in enumerate(self.agents):
             if not self.compute_done(a) and a != agent:
-                #rew += self.dist_coeff * inv_dist(pos, self.agent_positions[a])
                 dists.append(inv_dist(pos, self.agent_positions[a]))
                 other_survival_bonus += self.survival_bonus
                 punishment += self.punish_frames[aid, pos[0], pos[1]]
-                #if self.agent_positions[a] == pos:
-                #    same_poses += 1
         dists.sort()
 
         if self.health_baseline:
             health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else 0.5
         else:
             health = 1
-        rew  = health
-        rew += (self.dist_coeff * dists[-1])
-        rew += other_survival_bonus
-        rew -= (self.twonn_coeff * dists[-2])
-        rew -= self.punish_coeff * punishment
-        rew -= self.move_coeff * int(self.moved_last_turn[agent])
-        #if same_poses > 2:
-        #    rew -= same_poses
+
+        nn_rew    =  (self.dist_coeff * dists[-1])
+        twonn_rew = -(self.twonn_coeff * dists[-2])
+        pun_rew   = -self.punish_coeff * punishment
+        mov_rew   = -self.move_coeff * int(self.moved_last_turn[agent])
+
+        # Remember to update this function whenever you add a new reward
+        self.mc.collect_rew(self, health, nn_rew, twonn_rew, other_survival_bonus, pun_rew, mov_rew)
+
+        rew  = health + nn_rew + twonn_rew + other_survival_bonus + pun_rew + mov_rew
         return rew
 
     def compute_exchange_amount(self, x: int, y: int, food: int, picker: int):
@@ -272,19 +308,14 @@ class Trade(MultiAgentEnv):
                 pick = ((action - ndir - int(self.punish)) % 2 == 0)
                 food = floor((action - ndir - int(self.punish)) / 2)
                 if pick:
-                    exchange_amount = self.compute_exchange_amount(x, y, food, aid)
-                    if exchange_amount > 0:
-                        for i, other_agent in enumerate(self.agents):
-                            self.player_exchanges[(other_agent, agent, food)] += self.table[x, y, food, i]
-                    self.num_exchanges[food] += exchange_amount
-                    self.picked_counts[agent][food] += self.compute_pick_amount(x, y, food, aid)
+                    self.mc.collect_pick(self, agent, x, y, food, aid)
                     self.agent_food_counts[agent][food] += np.sum(self.table[x, y, food])
                     self.table[x, y, food, :] = 0
                 elif self.agent_food_counts[agent][food] >= PLACE_AMOUNT:
                     actual_place_amount = PLACE_AMOUNT
                     self.agent_food_counts[agent][food] -= actual_place_amount
                     place_table[x, y, food, aid] += actual_place_amount
-                    self.placed_counts[agent][food] += actual_place_amount
+                    self.mc.collect_place(self, agent, food, actual_place_amount)
             # last action is noop
             elif action in range(4 + self.food_types * 2 + int(self.punish), self.num_actions-1):
                 symbol = action - (self.food_types * 2) - 4
@@ -303,9 +334,7 @@ class Trade(MultiAgentEnv):
 
         obs = {agent: self.compute_observation(agent) for agent in actions.keys()}
         dones = {agent: self.compute_done(agent) for agent in actions.keys()}
-        for agent, done in dones.items():
-            if not done:
-                self.lifetimes[agent] += 1
+        self.mc.collect_lifetimes(dones)
         rewards = {agent: self.compute_reward(agent) for agent in actions.keys()}
 
         dones = {**dones, "__all__": all(dones.values())}

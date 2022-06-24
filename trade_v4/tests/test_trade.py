@@ -1,6 +1,7 @@
 import numpy as np
 from trade_v4 import Trade, METABOLISM, PLACE_AMOUNT, POLICY_MAPPING_FN
 import unittest
+import random
 
 """
 Add tests for:
@@ -15,8 +16,9 @@ oned_config = {
         "food_types": 2,
         "num_agents": 2,
         "episode_length": 200,
-        "move_coeff": 0.0,
-        "dist_coeff": 0,
+        "move_coeff": 0.1,
+        "dist_coeff": 0.1,
+        "twonn_coeff": 0.1,
         "death_prob": 0.1,
         "random_start": False,
         "respawn": False,
@@ -44,8 +46,8 @@ class TestTrade(unittest.TestCase):
         self.assertAlmostEqual(counts[1][1]-2*METABOLISM, env.agent_food_counts[p1][1])
         self.assertAlmostEqual(counts[0][1]-2*METABOLISM+PLACE_AMOUNT, env.agent_food_counts[p0][1])
         self.assertAlmostEqual(counts[1][0]-2*METABOLISM+PLACE_AMOUNT, env.agent_food_counts[p1][0])
-        self.assertAlmostEqual(env.num_exchanges[0], PLACE_AMOUNT)
-        self.assertAlmostEqual(env.num_exchanges[1], PLACE_AMOUNT)
+        self.assertAlmostEqual(env.mc.num_exchanges[0], PLACE_AMOUNT)
+        self.assertAlmostEqual(env.mc.num_exchanges[1], PLACE_AMOUNT)
 
 
     def test_punish(self):
@@ -154,6 +156,33 @@ class TestTrade(unittest.TestCase):
         env.compute_pick_amount(0, 0, 0, 0)
         env.update_dones()
         env.step(act(env, "NONE"))
+
+    def test_env_run(self):
+        conf = oned_config.copy()
+        conf["punish"] = True
+        conf["num_agents"] = 3
+        env = Trade(conf)
+        env.reset()
+
+        env.agent_positions["player_0"] = (0,0)
+        env.agent_positions["player_1"] = (0,0)
+        env.agent_positions["player_2"] = (0,0)
+
+        def random_actions():
+            return {agent: random.randint(0, len(env.MOVES)-1) for agent in env.agents if not env.compute_done(agent)}
+
+        obs, rews, dones, _ = env.step(act(env, "PUNISH", "PUNISH"))
+        while not dones["__all__"]:
+            obs, rews, dones, _ = env.step(random_actions())
+        # Check rewards
+        self.assertNotAlmostEqual(env.mc.rew_health, 0)
+        self.assertNotAlmostEqual(env.mc.rew_nn,     0)
+        self.assertNotAlmostEqual(env.mc.rew_twonn,  0)
+        self.assertNotAlmostEqual(env.mc.rew_pun,    0)
+        self.assertNotAlmostEqual(env.mc.rew_mov,    0)
+        self.assertNotAlmostEqual(env.mc.rew_other_survival_bonus,    0)
+
+
 
 if __name__ == '__main__':
     unittest.main()
