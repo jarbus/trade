@@ -27,6 +27,7 @@ def get_args():
     parser.add_argument('--health-baseline', action="store_true")
     parser.add_argument('--num-policies', type=int, default=1, help="[1,2,4]")
     parser.add_argument('--respawn', action="store_true")
+    parser.add_argument('--resume', action="store_true")
     parser.add_argument('--punish', action="store_true")
     parser.add_argument('--pbt', action="store_true")
     return parser.parse_args()
