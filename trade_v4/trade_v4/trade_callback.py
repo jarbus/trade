@@ -78,3 +78,9 @@ class TradeCallback(DefaultCallbacks):
         if total_number_of_actions > 0:
             for act, count in self.action_counts.items():
                 episode.custom_metrics[f"percent_{act}"] = count / total_number_of_actions
+        episode.custom_metrics["rew_health"] = env.mc.rew_health
+        episode.custom_metrics["rew_nn"] = env.mc.rew_nn
+        episode.custom_metrics["rew_twonn"] = env.mc.rew_twonn
+        episode.custom_metrics["rew_other_survival_bonus"] = env.mc.rew_other_survival_bonus
+        episode.custom_metrics["rew_pun"] = env.mc.rew_pun
+        episode.custom_metrics["rew_mov"] = env.mc.rew_mov
