@@ -1,9 +1,11 @@
 import numpy as np
-import math
 
 FIRE_LIGHT_LEVEL:     float = 0.1
 MAX_LIGHT_LEVEL:      float = 1.0
 STARTING_LIGHT_LEVEL: float = 0.0
+
+def isclose(a,b):
+    return abs(a-b) <= 1e-09
 
 class Light:
     def __init__(self, grid_size, interval):
@@ -13,11 +15,14 @@ class Light:
         self.fire_range = range(*tx), range(*ty)
         self.light_level = 0
         self.interval = interval
-        self.night = True
+        self.increasing = True
 
     def reset(self):
         self.light_level = STARTING_LIGHT_LEVEL
-        self.night = True
+        self.increasing = True
+
+    def dawn(self):
+        return self.increasing and isclose(self.light_level, 0)
 
     def contains(self, pos):
         if self.light_level >= 0:
@@ -32,9 +37,9 @@ class Light:
         return frame
 
     def step_light(self):
-        if self.night:
+        if self.increasing:
             self.light_level += self.interval
         else:
             self.light_level -= self.interval
-        if math.isclose(abs(self.light_level), MAX_LIGHT_LEVEL):
-            self.night = not self.night
+        if isclose(abs(self.light_level), MAX_LIGHT_LEVEL):
+            self.increasing = not self.increasing

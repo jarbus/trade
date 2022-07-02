@@ -154,7 +154,8 @@ if __name__ == "__main__":
             "sgd_minibatch_size": batch_size,
             "train_batch_size": batch_size,
             'rollout_fragment_length': 50,
-            'lr': tune.choice([1e-04]),
+            #'lr': tune.choice([1e-04, 2e-04, 3e-04]),
+            'lr': tune.choice([1e-04, 2e-04, 3e-04]),
             # Method specific
             "multiagent": {
                 "policies": policies,
