@@ -124,7 +124,7 @@ class Trade(MultiAgentEnv):
 
 
         self.action_space = Discrete(self.num_actions)
-        self.obs_size = (self.channels, *add_tup(add_tup(self.window_size, self.window_size), (1, 1)))
+        self.obs_size = (*add_tup(add_tup(self.window_size, self.window_size), (1, 1)), self.channels)
         self.observation_space = Box(low=np.full(self.obs_size, -1, dtype=np.float32), high=np.full(self.obs_size, 10))
         self._skip_env_checking = True
 
@@ -215,10 +215,10 @@ class Trade(MultiAgentEnv):
         xpos_frame = np.repeat(np.arange(gy).reshape(1, gy), gx, axis=0) / gx
         ypos_frame = np.repeat(np.arange(gx).reshape(gx, 1), gy, axis=1) / gy
 
-        frames = np.stack([*food_frames, *agent_and_food_frames, xpos_frame, ypos_frame, *light_frames, *pun_frames, *comm_frames])
-        padded_frames = np.full((frames.shape[0], *self.padded_grid_size), -1, dtype=np.float32)
-        padded_frames[:, wx:(gx+wx), wy:(gy+wy)] = frames
-        obs = padded_frames[:, minx:maxx, miny:maxy] / SCALE_DOWN
+        frames = np.stack([*food_frames, *agent_and_food_frames, xpos_frame, ypos_frame, *light_frames, *pun_frames, *comm_frames], axis=2)
+        padded_frames = np.full((*self.padded_grid_size, frames.shape[2]), -1, dtype=np.float32)
+        padded_frames[wx:(gx+wx), wy:(gy+wy), :] = frames
+        obs = padded_frames[minx:maxx, miny:maxy, :] / SCALE_DOWN
         return obs
 
     def compute_done(self, agent):
@@ -245,6 +245,8 @@ class Trade(MultiAgentEnv):
         dists.sort()
 
         if self.health_baseline:
+            #num_of_food_types = sum(1 for f in self.agent_food_counts[agent] if f >= 0.1)
+            #health = [0, 1, 10][num_of_food_types]
             health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else 0.5
         else:
             health = 1
@@ -329,7 +331,7 @@ class Trade(MultiAgentEnv):
         # Once agents complete all actions, add placed food to table
         self.table = self.table + place_table
         self.steps += 1
-        if self.respawn and self.steps % 20 == 0:
+        if self.respawn and self.light.dawn():
             self.spawn_food()
 
         obs = {agent: self.compute_observation(agent) for agent in actions.keys()}
