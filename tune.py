@@ -32,6 +32,7 @@ def generate_configs():
         "food_agent_start": args.food_agent_start,
         "food_env_spawn": args.food_env_spawn,
         "day_night_cycle": args.day_night_cycle,
+        "night_time_death_prob": args.night_time_death_prob,
         "day_steps": args.day_steps,
         "policy_mapping_fn": POLICY_MAPPING_FN[args.num_policies],
         "vocab_size": 0}
