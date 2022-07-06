@@ -6,7 +6,7 @@ from math import floor
 from .utils import add_tup, directions, valid_pos, inv_dist, punish_region
 from pdb import set_trace as T
 from .light import Light
-from .spawners import CenterSpawner, FourCornerSpawner, RandomSpawner
+from .spawners import CenterSpawner, FourCornerSpawner, RandomSpawner, FilledCornerSpawner
 import sys
 from collections import defaultdict
 
@@ -111,15 +111,13 @@ class Trade(MultiAgentEnv):
         self.num_actions = len(self.MOVES)
         self.communications = {}
 
-        # TODO make this a dict
-        if self.spawn_agents == "center":
-            self.agent_spawner = CenterSpawner(self.grid_size)
-        elif self.spawn_agents == "corner":
-            self.agent_spawner = FourCornerSpawner(self.grid_size)
-        else:
-            self.agent_spawner = RandomSpawner(self.grid_size)
+        self.agent_spawner = {
+            "center": CenterSpawner(self.grid_size),
+            "corner": FourCornerSpawner(self.grid_size),
+            "random": RandomSpawner(self.grid_size)
+        }[self.spawn_agents]
 
-        self.food_spawner = FourCornerSpawner(self.grid_size)
+        self.food_spawner = FilledCornerSpawner(self.grid_size)
 
 
 
@@ -135,8 +133,8 @@ class Trade(MultiAgentEnv):
     def spawn_food(self):
         fc = self.food_env_spawn if self.respawn else 10
         food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
-        num_piles = 3
-        
+        num_piles = 100
+
         for i in range(num_piles):
             spawn_spots = self.food_spawner.gen_poses()
             for spawn_spot, (ft, fc) in zip(spawn_spots, food_counts):
@@ -154,6 +152,7 @@ class Trade(MultiAgentEnv):
 
         self.punish_frames = np.zeros((len(self.agents), *self.grid_size))
         self.spawn_food()
+        self.agent_spawner.reset()
         spawn_spots = self.agent_spawner.gen_poses()
         self.agent_positions = {agent: spawn_spot for agent, spawn_spot in zip(self.agents, spawn_spots)}
         self.steps = 0
