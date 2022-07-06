@@ -46,11 +46,12 @@ def generate_configs():
     def gen_policy(i):
         config = {
             "model": {
-                "conv_filters": [[64, [3, 3], 1], [64, [3, 3], 1], [64, [3, 3], 1]],
+                "conv_filters": [[128, [3, 3], 1], [128, [3, 3], 1], [128, [3, 3], 1]],
                 "conv_activation": "relu",
-                "post_fcnet_hiddens": [64, 64],
+                "post_fcnet_hiddens": [128, 128],
                 "post_fcnet_activation": "relu",
                 "use_lstm": True,
+                "lstm_cell_size": 512,
                 "lstm_use_prev_action": False,
                 "max_seq_len": 50,
             },
@@ -146,7 +147,7 @@ if __name__ == "__main__":
             "batch_mode": 'truncate_episodes',
             "lambda": 0.95,
             "gamma": .99,
-            "clip_param": 0.1,
+            "clip_param": 0.05,
             "entropy_coeff": 0.05,
             'vf_loss_coeff': 0.25,
             # These params start off randomly drawn from a set.

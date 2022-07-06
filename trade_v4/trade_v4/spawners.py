@@ -42,7 +42,7 @@ class CenterSpawner(BaseSpawnGenerator):
 class FourCornerSpawner(BaseSpawnGenerator):
     def __init__(self, grid_size):
         self.gx, self.gy = grid_size
-        self.spawn_spots = [[(0,1), (0, 1)], [(0,1), (self.gy-2, self.gy-1)], [(self.gx-2, self.gx-1), (0,1)], [(self.gx-2,self.gx-1), (self.gy-2,self.gy-1)]]
+        self.spawn_spots = [[(0,1,2), (0, 1,2)], [(0,1,2), (self.gy-3, self.gy-2, self.gy-1)], [(self.gx-3, self.gx-2, self.gx-1), (0,1,2)], [(self.gx-3, self.gx-2,self.gx-1), (self.gy-3,self.gy-2,self.gy-1)]]
         self.spawn_spots = [two_combos(xs, ys) for (xs, ys) in self.spawn_spots]
         shuffle(self.spawn_spots)
 

@@ -135,10 +135,13 @@ class Trade(MultiAgentEnv):
     def spawn_food(self):
         fc = self.food_env_spawn if self.respawn else 10
         food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
-        spawn_spots = self.food_spawner.gen_poses()
-        for spawn_spot, (ft, fc) in zip(spawn_spots, food_counts):
-            fx, fy = spawn_spot
-            self.table[fx, fy, ft, len(self.agents)] = fc
+        num_piles = 3
+        
+        for i in range(num_piles):
+            spawn_spots = self.food_spawner.gen_poses()
+            for spawn_spot, (ft, fc) in zip(spawn_spots, food_counts):
+                fx, fy = spawn_spot
+                self.table[fx, fy, ft, len(self.agents)] += fc / num_piles
 
     def reset(self):
         self.light.reset()

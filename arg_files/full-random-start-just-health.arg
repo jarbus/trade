@@ -1,1 +1,0 @@
---class-name meeting --random-start --dist-coeff 0.2  --batch-size 1000 --death-prob 0.1 --num-steps 10000000 --checkpoint-interval 500  --health-baseline --full-random-start
