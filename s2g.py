@@ -101,7 +101,7 @@ def plot_step(step: Step):
                 f_pos = (row/scale, col/scale)
                 f_pos = add_tuple(f_pos, food_offsets[f])
                 f_pos = add_tuple(f_pos, grid_offset)
-                circ = plt.Circle(f_pos, radius=0.02*fcount/scale, color=food_colors[f], fill=True)
+                circ = plt.Circle(f_pos, radius=0.01+(0.02*fcount/scale), color=food_colors[f], fill=True)
                 grid.add_patch(circ)
 
 
