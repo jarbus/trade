@@ -39,7 +39,7 @@ class Step:
 
 all_exchange_messages = []
 player_colors = ["olivedrab", "darkcyan", "mediumslateblue", "purple"]
-food_colors = ["red", "yellow"]
+food_colors = ["red", "green"]
 offv = 0.01
 player_offsets = (0, offv), (offv, 0), (0, -offv), (-offv, 0)
 food_offsets = (offv, offv), (-offv, -offv)
@@ -70,8 +70,9 @@ def plot_step(step: Step):
             l_pos = (i/scale, j/scale)
             l_pos = add_tuple(l_pos, grid_offset)
             # Add a square at l_pos
-            c = (col + 1)/2
-            rect = plt.Rectangle(l_pos, 1/scale, 1/scale, color=(c, c, c), fill=True)
+            not_yellow = (col + 1)/4
+            yellow = (col + 1)/2
+            rect = plt.Rectangle(l_pos, 1/scale, 1/scale, color=(yellow, yellow, not_yellow), fill=True)
             grid.add_patch(rect)
 
 
@@ -88,8 +89,10 @@ def plot_step(step: Step):
         p_pos = tuple(p / scale for p in player.pos)
         p_pos = add_tuple(p_pos, player_offsets[i])
         p_pos = add_tuple(p_pos, grid_offset)
-        radius = 0.02
-        circ = plt.Circle(p_pos, radius=radius, color=color, fill=True)
+        radius = 0.03
+        # circ = plt.Circle(p_pos, radius=radius, color=color, fill=True)
+        circ = plt.Rectangle(p_pos, radius, radius, color=color, fill=True)
+        grid.add_patch(circ)
         if player.done:
             grid.text(*add_tuple(p_pos, (-radius/1.5, -radius/1.5)), f"{i}", fontsize=10, wrap=True, family="monospace")
         grid.add_patch(circ)
