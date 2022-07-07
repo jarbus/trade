@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser(description="Convert serve file to gif")
 parser.add_argument("file", type=str)
 args = parser.parse_args()
 
-player_expr = r"(player_\d): \((\d), (\d)\) \[(.*), (.*)\] (.*)$"
+player_expr = r"(player_\d): \((\d*), (\d*)\) \[(.*), (.*)\] (.*)$"
 exchange_expr = r"Exchange: (player_\d) gave (\S*) of food (\d) to (player_\d)"
 food_expr = r"food(\d):"
 light_expr = r"Light:$"
