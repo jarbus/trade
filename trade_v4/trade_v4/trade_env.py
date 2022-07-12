@@ -20,6 +20,7 @@ class TradeMetricCollector():
         self.rew_pun                  = 0
         self.rew_mov                  = 0
         self.rew_light                = 0
+        self.rew_acts                 = 0
 
         self.num_exchanges = [0]*env.food_types
         self.picked_counts = {agent: [0] * env.food_types for agent in env.agents}
@@ -44,7 +45,7 @@ class TradeMetricCollector():
         self.picked_counts[agent][food] += env.compute_pick_amount(x, y, food, agent_id)
         pass
 
-    def collect_rew(self, env, health, nn, twonn, other_survival_bonus, pun_rew, mov_rew, light):
+    def collect_rew(self, env, health, nn, twonn, other_survival_bonus, pun_rew, mov_rew, light, action_rewards):
         self.rew_health               += health
         self.rew_nn                   += nn
         self.rew_twonn                += twonn
@@ -52,6 +53,7 @@ class TradeMetricCollector():
         self.rew_pun                  += pun_rew
         self.rew_mov                  += mov_rew
         self.rew_light                += light
+        self.rew_acts                 += action_rewards
 
 METABOLISM=0.1
 PLACE_AMOUNT = 0.5
@@ -84,6 +86,7 @@ class Trade(MultiAgentEnv):
         self.spawn_agents          = env_config.get("spawn_agents", "center")
         self.twonn_coeff           = env_config.get("twonn_coeff", 0.0)
         self.light_coeff           = env_config.get("light_coeff", 1.0)
+        self.pickup_coeff          = env_config.get("pickup_coeff", 1.0)
         self.health_baseline       = env_config.get("health_baseline", False)
         self.policy_mapping_fn     = env_config.get("policy_mapping_fn")
         self.food_env_spawn        = env_config.get("food_env_spawn")
@@ -262,11 +265,12 @@ class Trade(MultiAgentEnv):
         twonn_rew = -(self.twonn_coeff * dists[-2])
         pun_rew   = -self.punish_coeff * punishment
         mov_rew   = -self.move_coeff * int(self.moved_last_turn[agent])
+        act_rew   = self.pickup_coeff * self.action_rewards[agent]
 
         # Remember to update this function whenever you add a new reward
-        self.mc.collect_rew(self, health, nn_rew, twonn_rew, other_survival_bonus, pun_rew, mov_rew, light_rew)
+        self.mc.collect_rew(self, health, nn_rew, twonn_rew, other_survival_bonus, pun_rew, mov_rew, light_rew, act_rew)
 
-        rew  = health + nn_rew + twonn_rew + other_survival_bonus + pun_rew + mov_rew + light_rew
+        rew  = health + nn_rew + twonn_rew + other_survival_bonus + pun_rew + mov_rew + light_rew + act_rew
         return rew
 
     def compute_exchange_amount(self, x: int, y: int, food: int, picker: int):
@@ -289,6 +293,7 @@ class Trade(MultiAgentEnv):
             #    self.dones[agent] = True
 
     def step(self, actions):
+        self.action_rewards = {a: 0 for a in self.agents}
         self.light.step_light()
         # all agents execute their action
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
@@ -319,6 +324,8 @@ class Trade(MultiAgentEnv):
                 if pick:
                     self.mc.collect_pick(self, agent, x, y, food, aid)
                     self.agent_food_counts[agent][food] += np.sum(self.table[x, y, food])
+                    # pickup reward
+                    self.action_rewards[agent] += self.table[x, y, food, len(self.agents)]
                     self.table[x, y, food, :] = 0
                 elif self.agent_food_counts[agent][food] >= PLACE_AMOUNT:
                     actual_place_amount = PLACE_AMOUNT

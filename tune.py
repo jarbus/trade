@@ -23,6 +23,7 @@ def generate_configs():
         "dist_coeff": args.dist_coeff,
         "death_prob": args.death_prob,
         "twonn_coeff": args.twonn_coeff,
+        "pickup_coeff": args.pickup_coeff,
         "respawn": args.respawn,
         "survival_bonus": args.survival_bonus,
         "health_baseline": args.health_baseline,
