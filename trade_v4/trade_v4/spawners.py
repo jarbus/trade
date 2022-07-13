@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import math
-from utils import two_combos, valid_pos
+from .utils import two_combos, valid_pos
 from random import shuffle, choice, randint, random
 from itertools import product
 
