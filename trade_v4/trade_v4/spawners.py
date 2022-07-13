@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import math
-from .utils import two_combos, valid_pos
+from utils import two_combos, valid_pos
 from random import shuffle, choice, randint, random
 from itertools import product
 
@@ -64,21 +64,29 @@ class FilledCornerSpawner(BaseSpawnGenerator):
         self.n = (min(grid_size) // 2)
         self.corners = [(0,0), (0, self.gy-1), (self.gx-1, 0), (self.gx-1, self.gy-1)]
         self.reset()
-        self.prob_corner = 0.8
+        self.init_corner_probs(self.n)
 
     def reset(self):
         shuffle(self.corners)
 
+    def init_corner_probs(self, radius):
+        qc = np.zeros((radius, radius))
+        # generate quarter-cirl with depleting probs as radius increases
+        for r in range(radius):
+            for i in range(r):
+                for j in range(r):
+                    if (i)**2 + (j)**2 <= radius**2:
+                        qc[i, j] += (radius - r)**2
+
+        self.idxs = np.indices(qc.shape).reshape(2, -1).T
+        self.probs = qc.flatten() / np.sum(qc)
+
+    def sample_corner_offset(self):
+        return self.idxs[np.random.choice(np.arange(len(self.idxs)), p=self.probs)]
+
     def sample_corner_point(self, corner):
-        if random() < self.prob_corner:
-            return corner
-        point = []
-        for c in corner:
-            if c == 0:
-                point.append(c + randint(0, self.n-1))
-            else:
-                point.append(c - randint(0, self.n-1))
-        return tuple(point)
+        offset = self.sample_corner_offset()
+        return (abs(corner[0] - offset[0]), abs(corner[1] - offset[1]))
 
     def gen_poses(self):
         return [self.sample_corner_point(corner) for corner in self.corners]
