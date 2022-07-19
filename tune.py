@@ -13,7 +13,7 @@ from DIRS import RESULTS_DIR
 args = get_args()
 
 def generate_configs():
-    num_agents = 4
+    num_agents = args.num_agents
     env_config = {"window": (3, 3),
         "grid": (args.gx, args.gy),
         "food_types": 2,

@@ -230,7 +230,7 @@ class Trade(MultiAgentEnv):
         return obs
 
     def compute_done(self, agent):
-        if self.dones[agent] or self.steps >= self.max_steps:
+        if self.dones[agent] or self.steps >= self.max_steps-2:
             return True
         return False
 
@@ -283,14 +283,15 @@ class Trade(MultiAgentEnv):
         for agent in self.agents:
             if self.compute_done(agent):
                 continue
-            if max(self.agent_food_counts[agent]) < 0.1:
-                self.dones[agent] = True
-            else:
-                for f in self.agent_food_counts[agent]:
-                    if f < 0.1 and random() < self.death_prob:
-                        self.dones[agent] = True
-            #if not self.light.contains(self.agent_positions[agent]) and random() < self.night_time_death_prob:
-            #    self.dones[agent] = True
+            self.dones[agent] = self.steps >= self.max_steps -2
+        #    if max(self.agent_food_counts[agent]) < 0.1:
+        #        self.dones[agent] = True
+        #    else:
+        #        for f in self.agent_food_counts[agent]:
+        #            if f < 0.1 and random() < self.death_prob:
+        #                self.dones[agent] = True
+        #    if not self.light.contains(self.agent_positions[agent]) and random() < self.night_time_death_prob:
+        #        self.dones[agent] = True
 
     def step(self, actions):
         self.action_rewards = {a: 0 for a in self.agents}
@@ -325,7 +326,11 @@ class Trade(MultiAgentEnv):
                     self.mc.collect_pick(self, agent, x, y, food, aid)
                     self.agent_food_counts[agent][food] += np.sum(self.table[x, y, food])
                     # pickup reward
-                    self.action_rewards[agent] += self.table[x, y, food, len(self.agents)]
+                    self.action_rewards[agent] += np.sum(self.table[x, y, food, :aid])
+                    self.action_rewards[agent] += np.sum(self.table[x, y, food, aid+1:])
+                    for oaid, oa in enumerate(self.agents):
+                        if oa != agent:
+                            self.action_rewards[oa] += np.sum(self.table[x, y, food, oaid])
                     self.table[x, y, food, :] = 0
                 elif self.agent_food_counts[agent][food] >= PLACE_AMOUNT:
                     actual_place_amount = PLACE_AMOUNT
