@@ -9,31 +9,35 @@ def isclose(a,b):
 
 class Light:
     def __init__(self, grid_size, interval):
-        gx, gy = self.grid_size = grid_size
-        tx, ty = tuple([(gx//2)-1, ((gx//2)+2)]), tuple([(gy//2)-1, ((gy//2)+2)])
-        self.fire_slice = slice(*tx), slice(*ty)
-        self.fire_range = range(*tx), range(*ty)
+        self.gx, self.gy = self.grid_size = grid_size
+        self.cx, self.cy = self.gx // 2, self.gy // 2
         self.light_level = 0
         self.interval = interval
         self.increasing = True
+        self.frame = self.fire_frame()
 
     def reset(self):
         self.light_level = STARTING_LIGHT_LEVEL
         self.increasing = True
+        self.frame = self.fire_frame()
 
     def dawn(self):
         return self.increasing and isclose(self.light_level, 0)
 
     def contains(self, pos):
-        if self.light_level >= 0:
-            return True
-        if pos[0] in self.fire_range[0] and pos[1] in self.fire_range[1]:
-            return True
-        return False
+        return self.frame[pos] >= 0
 
-    def frame(self):
+    def fire_frame(self):
+        if self.light_level >= 0:
+            return np.full(self.grid_size, self.light_level)
+        fire_light = np.zeros((self.gx, self.gy))
+        i, j = self.cx-3, self.cy-3
+        while i <= self.cx and j <= self.cy:
+            fire_light[i:self.gx-i, j:self.gy-j] += self.interval
+            i += 1
+            j += 1
         frame = np.full(self.grid_size, self.light_level)
-        frame[self.fire_slice[0], self.fire_slice[1]] = FIRE_LIGHT_LEVEL
+        frame[fire_light > 0] = np.clip(fire_light[fire_light > 0] - (self.interval * 2), self.light_level, 1)
         return frame
 
     def step_light(self):
@@ -43,3 +47,15 @@ class Light:
             self.light_level -= self.interval
         if isclose(abs(self.light_level), MAX_LIGHT_LEVEL):
             self.increasing = not self.increasing
+        self.frame = self.fire_frame()
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    l = Light((11,11), 0.2)
+    for i in range(25):
+        print(l.frame.round(2))
+        plt.matshow(l.frame, vmin=-1, vmax=1)
+        plt.colorbar()
+        plt.show()
+        plt.close()
+        l.step_light()
