@@ -33,11 +33,11 @@ class Light:
         fire_light = np.zeros((self.gx, self.gy))
         i, j = self.cx-3, self.cy-3
         while i <= self.cx and j <= self.cy:
-            fire_light[i:self.gx-i, j:self.gy-j] += self.interval
+            fire_light[i:self.gx-i, j:self.gy-j] += 2*self.interval
             i += 1
             j += 1
         frame = np.full(self.grid_size, self.light_level)
-        frame[fire_light > 0] = np.clip(fire_light[fire_light > 0] - (self.interval * 3), self.light_level, 1)
+        frame[fire_light > 0] = np.clip(fire_light[fire_light > 0] - (self.interval * 6), self.light_level, 1)
         return frame
 
     def step_light(self):
