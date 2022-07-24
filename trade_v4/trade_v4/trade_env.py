@@ -253,9 +253,9 @@ class Trade(MultiAgentEnv):
         dists.sort()
 
         if self.health_baseline:
-            #num_of_food_types = sum(1 for f in self.agent_food_counts[agent] if f >= 0.1)
-            #health = [0, 1, 10][num_of_food_types]
-            health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else 0.5
+            num_of_food_types = sum(1 for f in self.agent_food_counts[agent] if f >= 0.1)
+            health = [-1, 0, 2][num_of_food_types]
+            #health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else -1
         else:
             health = 1
 
