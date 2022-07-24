@@ -259,7 +259,7 @@ class Trade(MultiAgentEnv):
         else:
             health = 1
 
-        light_rew = 0 if self.light.contains(self.agent_positions[agent]) else -self.light_coeff
+        light_rew = 0 if self.light.contains(self.agent_positions[agent]) else self.light_coeff * self.light.frame[self.agent_positions[agent]]
 
         nn_rew    =  (self.dist_coeff * dists[-1])
         twonn_rew = -(self.twonn_coeff * dists[-2])
