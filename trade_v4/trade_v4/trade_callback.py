@@ -37,8 +37,8 @@ class TradeCallback(DefaultCallbacks):
 
     def on_episode_end(self, worker, base_env, policies, episode, **kwargs,):
         env = base_env.get_unwrapped()[0]
-        if not all(env.dones.values()):
-            return
+        #if not all(env.dones.values()):
+        #    return
         episode.custom_metrics["grid_size"] = env.grid_size
         for food, count in enumerate(env.mc.num_exchanges):
             episode.custom_metrics[f"exchange_{food}"] = count
