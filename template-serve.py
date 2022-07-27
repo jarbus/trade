@@ -65,7 +65,7 @@ if __name__ == "__main__":
             test_env.render(out=f)
             for agent in obss.keys():
                 policy = trainer.get_policy(policy_mapping_fn(agent))
-                actions[agent], states[agent], logits = policy.compute_single_action(obs=np.array(obss[agent]), state=states[agent], policy_id=agent)
+                actions[agent], states[agent], logits = policy.compute_single_action(obs=np.array(obss[agent]), state=states[agent], policy_id=agent, explore=False, timestep=i)
                 actions[agent] = torch.tensor(actions[agent])
 
             obss, rews, dones, infos = test_env.step({agent: action for agent, action in actions.items() if not test_env.compute_done(agent)})
