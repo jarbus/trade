@@ -328,9 +328,10 @@ class Trade(MultiAgentEnv):
                     # pickup reward
                     self.action_rewards[agent] += np.sum(self.table[x, y, food, :aid])
                     self.action_rewards[agent] += np.sum(self.table[x, y, food, aid+1:])
-                    for oaid, oa in enumerate(self.agents):
-                        if oa != agent:
-                            self.action_rewards[oa] += np.sum(self.table[x, y, food, oaid])
+                    # Sharing reward
+                    #for oaid, oa in enumerate(self.agents):
+                    #    if oa != agent:
+                    #        self.action_rewards[oa] += np.sum(self.table[x, y, food, oaid])
                     self.table[x, y, food, :] = 0
                 elif self.agent_food_counts[agent][food] >= PLACE_AMOUNT:
                     actual_place_amount = PLACE_AMOUNT
