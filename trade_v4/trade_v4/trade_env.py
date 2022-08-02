@@ -148,6 +148,7 @@ class Trade(MultiAgentEnv):
                 self.table[fx, fy, ft, len(self.agents)] += fc / num_piles
 
     def reset(self):
+
         self.light.reset()
         self.agents = self.possible_agents[:]
         self.dones = {agent: False for agent in self.agents}
@@ -165,7 +166,7 @@ class Trade(MultiAgentEnv):
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
         self.agent_food_counts = {agent: [self.food_agent_start for f in range(self.food_types)] for agent in self.agents}
         self.mc = TradeMetricCollector(self)
-        return {agent: self.compute_observation(agent) for agent in self.agents}
+        return {self.agents[0]: self.compute_observation(self.agents[0])}
 
     def render(self, mode="human", out=sys.stdout):
         for agent in self.agents:
@@ -230,7 +231,7 @@ class Trade(MultiAgentEnv):
         return obs
 
     def compute_done(self, agent):
-        if self.dones[agent] or self.steps >= self.max_steps-2:
+        if self.dones[agent] or self.steps >= self.max_steps:
             return True
         return False
 
@@ -254,7 +255,7 @@ class Trade(MultiAgentEnv):
 
         if self.health_baseline:
             num_of_food_types = sum(1 for f in self.agent_food_counts[agent] if f >= 0.1)
-            health = [-1, 0, 2][num_of_food_types]
+            health = [0, 0, 2][num_of_food_types]
             #health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else -1
         else:
             health = 1
@@ -283,7 +284,9 @@ class Trade(MultiAgentEnv):
         for agent in self.agents:
             if self.compute_done(agent):
                 continue
-            self.dones[agent] = self.steps >= self.max_steps -2
+            self.dones[agent] = self.steps >= self.max_steps
+    def next_agent(self, agent):
+        return self.agents[(self.agents.index(agent)+1) % len(self.agents)]
         #    if max(self.agent_food_counts[agent]) < 0.1:
         #        self.dones[agent] = True
         #    else:
@@ -299,13 +302,10 @@ class Trade(MultiAgentEnv):
         # all agents execute their action
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
         self.punish_frames = np.zeros((len(self.agents), *self.grid_size))
-        random_order = list(actions.keys())
-        shuffle(random_order)
         # placed goods will not be available until next turn
         place_table = np.zeros(self.table.shape, dtype=np.float32)
         gx, gy = self.grid_size
-        for agent in random_order:
-            action = actions[agent]
+        for agent, action in actions.items():
             # MOVEMENT
             self.moved_last_turn[agent] = False
             x, y = self.agent_positions[agent]
@@ -345,19 +345,21 @@ class Trade(MultiAgentEnv):
                 self.communications[agent][symbol] = 1
             self.agent_food_counts[agent] = [max(x - METABOLISM, 0) for x in self.agent_food_counts[agent]]
 
+            if agent == self.agents[-1]:
+                self.steps += 1
+
         self.update_dones()
 
 
         # Once agents complete all actions, add placed food to table
         self.table = self.table + place_table
-        self.steps += 1
         if self.respawn and self.light.dawn():
             self.spawn_food()
 
-        obs = {agent: self.compute_observation(agent) for agent in actions.keys()}
+        obs = {self.next_agent(agent): self.compute_observation(self.next_agent(agent)) for agent in actions.keys()}
         dones = {agent: self.compute_done(agent) for agent in actions.keys()}
         self.mc.collect_lifetimes(dones)
-        rewards = {agent: self.compute_reward(agent) for agent in actions.keys()}
+        rewards = {self.next_agent(agent): self.compute_reward(self.next_agent(agent)) for agent in actions.keys()}
 
         dones = {**dones, "__all__": all(dones.values())}
         infos = {}
