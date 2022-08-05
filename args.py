@@ -3,6 +3,8 @@ import argparse
 
 def get_args():
     parser = argparse.ArgumentParser(description='Execute Trading Environment.')
+    parser.add_argument('--checkpoint', type=str)  # for serves only
+    parser.add_argument('--tmp-checkpoint', type=str)  # for serves only
     parser.add_argument('--ip', type=str)
     parser.add_argument('--name', type=str, default="test")
     parser.add_argument('--num-samples', type=int, default=8)
