@@ -151,6 +151,7 @@ class Trade(MultiAgentEnv):
 
         self.light.reset()
         self.agents = self.possible_agents[:]
+        self.action_rewards = {a: 0 for a in self.agents}
         self.dones = {agent: False for agent in self.agents}
         self.moved_last_turn = {agent: False for agent in self.agents}
         gx, gy = self.grid_size
@@ -297,15 +298,10 @@ class Trade(MultiAgentEnv):
         #        self.dones[agent] = True
 
     def step(self, actions):
-        self.action_rewards = {a: 0 for a in self.agents}
-        self.light.step_light()
-        # all agents execute their action
-        self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
-        self.punish_frames = np.zeros((len(self.agents), *self.grid_size))
         # placed goods will not be available until next turn
-        place_table = np.zeros(self.table.shape, dtype=np.float32)
         gx, gy = self.grid_size
         for agent, action in actions.items():
+            self.action_rewards[agent] = 0
             # MOVEMENT
             self.moved_last_turn[agent] = False
             x, y = self.agent_positions[agent]
@@ -336,7 +332,7 @@ class Trade(MultiAgentEnv):
                 elif self.agent_food_counts[agent][food] >= PLACE_AMOUNT:
                     actual_place_amount = PLACE_AMOUNT
                     self.agent_food_counts[agent][food] -= actual_place_amount
-                    place_table[x, y, food, aid] += actual_place_amount
+                    self.table[x, y, food, aid] += actual_place_amount
                     self.mc.collect_place(self, agent, food, actual_place_amount)
             # last action is noop
             elif action in range(4 + self.food_types * 2 + int(self.punish), self.num_actions-1):
@@ -347,12 +343,12 @@ class Trade(MultiAgentEnv):
 
             if agent == self.agents[-1]:
                 self.steps += 1
+                self.light.step_light()
 
         self.update_dones()
 
 
         # Once agents complete all actions, add placed food to table
-        self.table = self.table + place_table
         if self.respawn and self.light.dawn():
             self.spawn_food()
 
