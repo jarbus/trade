@@ -52,7 +52,8 @@ class Light:
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     l = Light((11,11), 0.2)
-    for i in range(25):
+    l.increasing = False
+    for i in range(10):
         print(l.frame.round(2))
         plt.matshow(l.frame, vmin=-1, vmax=1)
         plt.colorbar()

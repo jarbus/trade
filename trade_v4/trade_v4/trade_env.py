@@ -148,6 +148,7 @@ class Trade(MultiAgentEnv):
             spawn_spots = self.food_spawner.gen_poses()
             for spawn_spot, (ft, fc) in zip(spawn_spots, food_counts):
                 fx, fy = spawn_spot
+                print(fc, num_piles)
                 self.table[fx, fy, ft, len(self.agents)] += fc / num_piles
 
     def reset(self):
@@ -170,6 +171,7 @@ class Trade(MultiAgentEnv):
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
         self.agent_food_counts = {agent: [self.food_agent_start for f in range(self.food_types)] for agent in self.agents}
         self.mc = TradeMetricCollector(self)
+        print(self.table.sum(axis=3).sum(axis=2).round(1))
         return {self.agents[0]: self.compute_observation(self.agents[0])}
 
     def render(self, mode="human", out=sys.stdout):
@@ -363,7 +365,7 @@ class Trade(MultiAgentEnv):
                 if self.respawn and self.light.dawn():
                     self.spawn_food()
 
-        self.update_dones()
+                    self.update_dones()
 
         obs = {self.next_agent(agent): self.compute_observation(self.next_agent(agent)) for agent in actions.keys()}
         dones = {agent: self.compute_done(agent) for agent in actions.keys()}

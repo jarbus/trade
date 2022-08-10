@@ -36,6 +36,10 @@ class TradeCallback(DefaultCallbacks):
 
 
     def on_episode_end(self, worker, base_env, policies, episode, **kwargs,):
+        print("EP END")
+        print("EP END")
+        print("EP END")
+        print("EP END")
         env = base_env.get_unwrapped()[0]
         #if not all(env.dones.values()):
         #    return
