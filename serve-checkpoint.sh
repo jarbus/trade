@@ -32,6 +32,8 @@ while read -r file; do
             # Use srun instead of sbatch because 
 
             echo "srun --job-name=ray-serve --output=serves/serve.log --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 --ntasks-per-node=1 --cpus-per-task=16 python reserve.py --checkpoint $file --tmp-checkpoint $tmp_file $args"
+
+            echo "srun --job-name=ray-serve --output=serves/serve.log --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 --ntasks-per-node=1 --cpus-per-task=16 ~/miniconda3/envs/trade/bin/python reserve.py --checkpoint $file --tmp-checkpoint $tmp_file $args &"
             srun --job-name=ray-serve --output=serves/serve.log --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 --ntasks-per-node=1 --cpus-per-task=16 ~/miniconda3/envs/trade/bin/python reserve.py --checkpoint $file --tmp-checkpoint $tmp_file $args &
 
 

@@ -27,6 +27,7 @@ def get_args():
     parser.add_argument('--twonn-coeff', type=float, default=1.0)
     parser.add_argument('--num-steps', type=float, default=1_000_000)
     parser.add_argument('--move-coeff', type=float, default=0.0)
+    parser.add_argument('--share-health', type=float, default=0.0)
     parser.add_argument('--death-prob', type=float, default=0.1)
     parser.add_argument('--pickup-coeff', type=float, default=1.0)
     parser.add_argument('--survival-bonus', type=float, default=0.0)

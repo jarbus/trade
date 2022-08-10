@@ -13,7 +13,8 @@ from collections import defaultdict
 
 class TradeMetricCollector():
     def __init__(self, env):
-        self.rew_health               = 0
+        self.rew_base_health          = 0
+        self.rew_shared_health        = 0
         self.rew_nn                   = 0
         self.rew_twonn                = 0
         self.rew_other_survival_bonus = 0
@@ -45,8 +46,9 @@ class TradeMetricCollector():
         self.picked_counts[agent][food] += env.compute_pick_amount(x, y, food, agent_id)
         pass
 
-    def collect_rew(self, env, health, nn, twonn, other_survival_bonus, pun_rew, mov_rew, light, action_rewards):
-        self.rew_health               += health
+    def collect_rew(self, env, base_health, shared_health, nn, twonn, other_survival_bonus, pun_rew, mov_rew, light, action_rewards):
+        self.rew_base_health          += base_health
+        self.rew_shared_health        += shared_health
         self.rew_nn                   += nn
         self.rew_twonn                += twonn
         self.rew_other_survival_bonus += other_survival_bonus
@@ -91,6 +93,7 @@ class Trade(MultiAgentEnv):
         self.policy_mapping_fn     = env_config.get("policy_mapping_fn")
         self.food_env_spawn        = env_config.get("food_env_spawn")
         self.food_agent_start      = env_config.get("food_agent_start", 1)
+        self.share_health          = env_config.get("share_health")
         self.padded_grid_size      = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
         self.light                 = Light(self.grid_size, 2/self.day_steps)
         super().__init__()
@@ -160,7 +163,7 @@ class Trade(MultiAgentEnv):
 
         self.punish_frames = np.zeros((len(self.agents), *self.grid_size))
         self.spawn_food()
-        self.agent_spawner.reset()
+        #self.agent_spawner.reset()
         spawn_spots = self.agent_spawner.gen_poses()
         self.agent_positions = {agent: spawn_spot for agent, spawn_spot in zip(self.agents, spawn_spots)}
         self.steps = 0
@@ -254,12 +257,24 @@ class Trade(MultiAgentEnv):
                 punishment += self.punish_frames[aid, pos[0], pos[1]]
         dists.sort()
 
+        base_health = 0
+        shared_health = 0
         if self.health_baseline:
-            num_of_food_types = sum(1 for f in self.agent_food_counts[agent] if f >= 0.1)
-            health = [0, 0, 2][num_of_food_types]
+            if not self.share_health:
+                num_of_food_types = sum(1 for f in self.agent_food_counts[agent] if f >= 0.1)
+                base_health = [0, 0, 2][num_of_food_types]
+            else:
+                health = 0
+                for a in self.agents:
+                    num_of_food_types = sum(1 for f in self.agent_food_counts[a] if f >= 0.1)
+                    if a == agent:
+                        base_health += [0, 0, 2][num_of_food_types]
+                    else:
+                        shared_health += [0, 0, 2][num_of_food_types] * self.share_health
+
             #health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else -1
         else:
-            health = 1
+            base_health = 1
 
         light_rew = 0 if self.light.contains(self.agent_positions[agent]) else self.light_coeff * self.light.frame[self.agent_positions[agent]]
 
@@ -270,9 +285,9 @@ class Trade(MultiAgentEnv):
         act_rew   = self.pickup_coeff * self.action_rewards[agent]
 
         # Remember to update this function whenever you add a new reward
-        self.mc.collect_rew(self, health, nn_rew, twonn_rew, other_survival_bonus, pun_rew, mov_rew, light_rew, act_rew)
+        self.mc.collect_rew(self, base_health, shared_health, nn_rew, twonn_rew, other_survival_bonus, pun_rew, mov_rew, light_rew, act_rew)
 
-        rew  = health + nn_rew + twonn_rew + other_survival_bonus + pun_rew + mov_rew + light_rew + act_rew
+        rew  = base_health + shared_health + nn_rew + twonn_rew + other_survival_bonus + pun_rew + mov_rew + light_rew + act_rew
         return rew
 
     def compute_exchange_amount(self, x: int, y: int, food: int, picker: int):
@@ -322,8 +337,8 @@ class Trade(MultiAgentEnv):
                     self.mc.collect_pick(self, agent, x, y, food, aid)
                     self.agent_food_counts[agent][food] += np.sum(self.table[x, y, food])
                     # pickup reward
-                    self.action_rewards[agent] += np.sum(self.table[x, y, food, :aid])
-                    self.action_rewards[agent] += np.sum(self.table[x, y, food, aid+1:])
+                    #self.action_rewards[agent] += np.sum(self.table[x, y, food, :aid])
+                    self.action_rewards[agent] += np.sum(self.table[x, y, food, -1])
                     # Sharing reward
                     #for oaid, oa in enumerate(self.agents):
                     #    if oa != agent:
@@ -344,13 +359,11 @@ class Trade(MultiAgentEnv):
             if agent == self.agents[-1]:
                 self.steps += 1
                 self.light.step_light()
+                # Once agents complete all actions, add placed food to table
+                if self.respawn and self.light.dawn():
+                    self.spawn_food()
 
         self.update_dones()
-
-
-        # Once agents complete all actions, add placed food to table
-        if self.respawn and self.light.dawn():
-            self.spawn_food()
 
         obs = {self.next_agent(agent): self.compute_observation(self.next_agent(agent)) for agent in actions.keys()}
         dones = {agent: self.compute_done(agent) for agent in actions.keys()}

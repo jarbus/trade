@@ -24,7 +24,10 @@ if __name__ == "__main__":
     for name in [class_name, exp_name, trial_name, check_name]:
         path = os.path.join(path, name)
         if not os.path.exists(path):
-            os.mkdir(path)
+            try:
+                os.mkdir(path)
+            except FileExistsError:
+                print(f"Error making dir {path}")
     for i in range(0, N):
         f = open(os.path.join(path, f"{i}.out"), "w")
 

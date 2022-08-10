@@ -32,7 +32,6 @@ class CenterSpawner(BaseSpawnGenerator):
         cx = (self.gx // 2)
         cy = (self.gy // 2)
         self.poses = [(cx-1, cy-1), (cx-1, cy+1), (cx+1,cy-1), (cx+1, cy+1)]
-        self.reset()
         # x_poses = [cx-1, cx, cx+1]
         # y_poses = [cy-1, cy, cy+1]
         # self.poses = list(filter(lambda pos: valid_pos(pos, self.grid_size), product(x_poses, y_poses)))
@@ -48,7 +47,6 @@ class FourCornerSpawner(BaseSpawnGenerator):
         self.gx, self.gy = grid_size
         self.spawn_spots = [[(0,1,2), (0, 1,2)], [(0,1,2), (self.gy-3, self.gy-2, self.gy-1)], [(self.gx-3, self.gx-2, self.gx-1), (0,1,2)], [(self.gx-3, self.gx-2,self.gx-1), (self.gy-3,self.gy-2,self.gy-1)]]
         self.spawn_spots = [two_combos(xs, ys) for (xs, ys) in self.spawn_spots]
-        self.reset()
 
     def reset(self):
         shuffle(self.spawn_spots)
@@ -63,7 +61,6 @@ class FilledCornerSpawner(BaseSpawnGenerator):
         self.gx, self.gy = grid_size
         self.n = (min(grid_size) // 2)
         self.corners = [(0,0), (0, self.gy-1), (self.gx-1, 0), (self.gx-1, self.gy-1)]
-        self.reset()
         self.init_corner_probs(self.n)
 
     def reset(self):
