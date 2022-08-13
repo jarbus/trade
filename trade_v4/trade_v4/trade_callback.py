@@ -91,3 +91,4 @@ class TradeCallback(DefaultCallbacks):
         episode.custom_metrics["rew_mov"] = env.mc.rew_mov
         episode.custom_metrics["rew_light"] = env.mc.rew_light
         episode.custom_metrics["rew_act"] = env.mc.rew_acts
+        episode.custom_metrics["rew_ineq"] = env.mc.rew_ineq

@@ -21,6 +21,7 @@ def generate_configs():
         "episode_length": args.episode_length,
         "move_coeff": args.move_coeff,
         "dist_coeff": args.dist_coeff,
+        "ineq_coeff": args.ineq_coeff,
         "death_prob": args.death_prob,
         "twonn_coeff": args.twonn_coeff,
         "pickup_coeff": args.pickup_coeff,

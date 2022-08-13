@@ -20,6 +20,7 @@ def get_args():
     parser.add_argument('--checkpoint-interval', type=int, default=500)
     parser.add_argument('--punish-coeff', type=float, default=2.0)
     parser.add_argument('--dist-coeff', type=float, default=0.0)
+    parser.add_argument('--ineq-coeff', type=float, default=0.0)
     parser.add_argument('--light-coeff', type=float, default=1.0)
     parser.add_argument('--gx', type=int, default=5)
     parser.add_argument('--gy', type=int, default=5)

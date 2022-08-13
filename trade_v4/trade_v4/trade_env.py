@@ -22,6 +22,7 @@ class TradeMetricCollector():
         self.rew_mov                  = 0
         self.rew_light                = 0
         self.rew_acts                 = 0
+        self.rew_ineq                 = 0
 
         self.num_exchanges = [0]*env.food_types
         self.picked_counts = {agent: [0] * env.food_types for agent in env.agents}
@@ -46,7 +47,7 @@ class TradeMetricCollector():
         self.picked_counts[agent][food] += env.compute_pick_amount(x, y, food, agent_id)
         pass
 
-    def collect_rew(self, env, base_health, shared_health, nn, twonn, other_survival_bonus, pun_rew, mov_rew, light, action_rewards):
+    def collect_rew(self, env, base_health, shared_health, nn, twonn, other_survival_bonus, pun_rew, mov_rew, light, action_rewards, ineq):
         self.rew_base_health          += base_health
         self.rew_shared_health        += shared_health
         self.rew_nn                   += nn
@@ -56,6 +57,7 @@ class TradeMetricCollector():
         self.rew_mov                  += mov_rew
         self.rew_light                += light
         self.rew_acts                 += action_rewards
+        self.rew_ineq                 += ineq
 
 METABOLISM=0.1
 PLACE_AMOUNT = 0.5
@@ -88,6 +90,7 @@ class Trade(MultiAgentEnv):
         self.spawn_agents          = env_config.get("spawn_agents", "center")
         self.spawn_food            = env_config.get("spawn_food", "corner")
         self.twonn_coeff           = env_config.get("twonn_coeff", 0.0)
+        self.ineq_coeff            = env_config.get("ineq_coeff", 0.0)
         self.light_coeff           = env_config.get("light_coeff", 1.0)
         self.pickup_coeff          = env_config.get("pickup_coeff", 1.0)
         self.health_baseline       = env_config.get("health_baseline", False)
@@ -265,18 +268,15 @@ class Trade(MultiAgentEnv):
 
         base_health = 0
         shared_health = 0
+        ineq = 0
         if self.health_baseline:
-            if not self.share_health:
-                num_of_food_types = sum(1 for f in self.agent_food_counts[agent] if f >= 0.1)
-                base_health = [0, 0, 2][num_of_food_types]
-            else:
-                health = 0
-                for a in self.agents:
+            num_of_food_types = sum(1 for f in self.agent_food_counts[agent] if f >= 0.1)
+            base_health = [0, 0, 2][num_of_food_types]
+            for a in self.agents:
+                if a != agent:
                     num_of_food_types = sum(1 for f in self.agent_food_counts[a] if f >= 0.1)
-                    if a == agent:
-                        base_health += [0, 0, 2][num_of_food_types]
-                    else:
-                        shared_health += [0, 0, 2][num_of_food_types] * self.share_health
+                    shared_health += [0, 0, 2][num_of_food_types] * self.share_health
+                    ineq += (shared_health - base_health)
 
             #health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else -1
         else:
@@ -289,11 +289,12 @@ class Trade(MultiAgentEnv):
         pun_rew   = -self.punish_coeff * punishment
         mov_rew   = -self.move_coeff * int(self.moved_last_turn[agent])
         act_rew   = self.pickup_coeff * self.action_rewards[agent]
+        ineq_rew  = -self.ineq_coeff * ineq
 
         # Remember to update this function whenever you add a new reward
-        self.mc.collect_rew(self, base_health, shared_health, nn_rew, twonn_rew, other_survival_bonus, pun_rew, mov_rew, light_rew, act_rew)
+        self.mc.collect_rew(self, base_health, shared_health, nn_rew, twonn_rew, other_survival_bonus, pun_rew, mov_rew, light_rew, act_rew, ineq_rew)
 
-        rew  = base_health + shared_health + nn_rew + twonn_rew + other_survival_bonus + pun_rew + mov_rew + light_rew + act_rew
+        rew  = base_health + shared_health + nn_rew + twonn_rew + other_survival_bonus + pun_rew + mov_rew + light_rew + act_rew + ineq_rew
         return rew
 
     def compute_exchange_amount(self, x: int, y: int, food: int, picker: int):
@@ -336,6 +337,7 @@ class Trade(MultiAgentEnv):
             elif action in range(ndir, ndir + int(self.punish)):
                 x_pun_region, y_pun_region = punish_region(x, y, *self.grid_size)
                 self.punish_frames[aid, x_pun_region, y_pun_region] = 1
+
             elif action in range(ndir + int(self.punish), ndir + int(self.punish) + (self.food_types * 2)):
                 pick = ((action - ndir - int(self.punish)) % 2 == 0)
                 food = floor((action - ndir - int(self.punish)) / 2)
