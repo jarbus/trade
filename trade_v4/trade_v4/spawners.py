@@ -144,7 +144,6 @@ class FilledCornerSpawner(BaseSpawnGenerator):
         return [self.sample_corner_point(corner) for corner in self.corners]
 
 if __name__ == "__main__":
-    print("hi")
     size = (11,11)
     fc = DoubleFilledCornerSpawner(size)
     x = np.zeros(size)
@@ -152,7 +151,6 @@ if __name__ == "__main__":
     for i in range(100):
         for pos in fc.gen_poses():
             x[pos] += 0.1
-    print(x)
     import matplotlib.pyplot as plt
     plt.matshow(x)
     plt.show()

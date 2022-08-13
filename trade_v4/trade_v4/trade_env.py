@@ -6,7 +6,7 @@ from math import floor
 from .utils import add_tup, directions, valid_pos, inv_dist, punish_region
 from pdb import set_trace as T
 from .light import Light
-from .spawners import CenterSpawner, FourCornerSpawner, RandomSpawner, FilledCornerSpawner
+from .spawners import CenterSpawner, FourCornerSpawner, RandomSpawner, FilledCornerSpawner, DoubleCenterSpawner, DoubleFilledCornerSpawner
 import sys
 from collections import defaultdict
 
@@ -86,6 +86,7 @@ class Trade(MultiAgentEnv):
         self.survival_bonus        = env_config.get("survival_bonus", 0.0)
         self.respawn               = env_config.get("respawn", False)
         self.spawn_agents          = env_config.get("spawn_agents", "center")
+        self.spawn_food            = env_config.get("spawn_food", "corner")
         self.twonn_coeff           = env_config.get("twonn_coeff", 0.0)
         self.light_coeff           = env_config.get("light_coeff", 1.0)
         self.pickup_coeff          = env_config.get("pickup_coeff", 1.0)
@@ -122,11 +123,15 @@ class Trade(MultiAgentEnv):
 
         self.agent_spawner = {
             "center": CenterSpawner(self.grid_size),
+            "doublecenter": DoubleCenterSpawner(self.grid_size),
             "corner": FourCornerSpawner(self.grid_size),
             "random": RandomSpawner(self.grid_size)
         }[self.spawn_agents]
 
-        self.food_spawner = FilledCornerSpawner(self.grid_size)
+        self.food_spawner = {
+            "corner": FilledCornerSpawner(self.grid_size),
+            "doublecorner": DoubleFilledCornerSpawner(self.grid_size)
+        }[self.spawn_food]
 
 
 
@@ -139,16 +144,16 @@ class Trade(MultiAgentEnv):
         if seed:
             np.random.seed(seed)
 
-    def spawn_food(self):
+    def generate_food(self):
         fc = self.food_env_spawn if self.respawn else 10
-        food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
+        #food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
+        food_counts = [(0, fc), (1, fc)]
         num_piles = 100
 
         for i in range(num_piles):
             spawn_spots = self.food_spawner.gen_poses()
             for spawn_spot, (ft, fc) in zip(spawn_spots, food_counts):
                 fx, fy = spawn_spot
-                print(fc, num_piles)
                 self.table[fx, fy, ft, len(self.agents)] += fc / num_piles
 
     def reset(self):
@@ -163,7 +168,7 @@ class Trade(MultiAgentEnv):
         self.table = np.zeros((*self.grid_size, self.food_types, len(self.agents)+1), dtype=np.float32)
 
         self.punish_frames = np.zeros((len(self.agents), *self.grid_size))
-        self.spawn_food()
+        self.generate_food()
         #self.agent_spawner.reset()
         spawn_spots = self.agent_spawner.gen_poses()
         self.agent_positions = {agent: spawn_spot for agent, spawn_spot in zip(self.agents, spawn_spots)}
@@ -171,7 +176,6 @@ class Trade(MultiAgentEnv):
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
         self.agent_food_counts = {agent: [self.food_agent_start for f in range(self.food_types)] for agent in self.agents}
         self.mc = TradeMetricCollector(self)
-        print(self.table.sum(axis=3).sum(axis=2).round(1))
         return {self.agents[0]: self.compute_observation(self.agents[0])}
 
     def render(self, mode="human", out=sys.stdout):
@@ -363,7 +367,7 @@ class Trade(MultiAgentEnv):
                 self.light.step_light()
                 # Once agents complete all actions, add placed food to table
                 if self.respawn and self.light.dawn():
-                    self.spawn_food()
+                    self.generate_food()
 
                     self.update_dones()
 

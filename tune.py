@@ -30,6 +30,7 @@ def generate_configs():
         "health_baseline": args.health_baseline,
         "punish": args.punish,
         "spawn_agents": args.spawn_agents,
+        "spawn_food": args.spawn_food,
         "light_coeff": args.light_coeff,
         "punish_coeff": args.punish_coeff,
         "food_agent_start": args.food_agent_start,
