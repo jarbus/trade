@@ -18,7 +18,7 @@ function download() {
 
 # check if first argument is not --download-only
 if [ "$1" != "--download-only" ]; then
-    ssh hpcc -t "source .bashrc; cd /home/garbus/trade; bash serve-checkpoint.sh"
+    ssh hpcc -t "source .bashrc; cd /home/garbus/trade; bash select-serves.sh; bash serve-checkpoint.sh"
     scp hpcc:/work/garbus/tmp/most-recent-serve-dirs.txt /tmp/most-recent-serve-dirs.txt
     DIR="$(cat /tmp/most-recent-serve-dirs.txt)"
 
