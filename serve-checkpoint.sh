@@ -1,15 +1,30 @@
-source /home/garbus/.bashrc
-conda activate trade
-DIR_PATH="/tmp/lf-select.txt"
-SERVE_PATHS="/work/garbus/tmp/most-recent-serve-dirs.txt"
-rm -f $SERVE_PATHS
-echo "" > $DIR_PATH
+#!/bin/bash
+#SBATCH --job-name=serve-checkpoints
+#SBATCH --output=/home/garbus/trade/serves/serve.log
+#SBATCH --account=guest
+#SBATCH --qos=low-gpu
+#SBATCH --partition=guest-gpu
+#SBATCH --gres=gpu:TitanX:8
+#SBATCH --exclude=gpu-6-9
+
 source DIRS.py
-/home/garbus/.local/bin/lf -selection-path $DIR_PATH /work/garbus/ray_results
-echo " " >> $DIR_PATH
+DIR_PATH="/work/garbus/tmp/lf-select.txt"
+SERVE_PATHS="/work/garbus/tmp/most-recent-serve-dirs.txt"
+echo "CHECKPOINTS TO BE SERVED:"
+#cat "$DIR_PATH"
+while read -r line; do 
+    echo $line
+    #srun --ntasks 1 --job-name=ray-serve --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 echo "begin" &
+    #srun --ntasks 1 --job-name=ray-serve --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 echo hostname &
+    #srun --ntasks 1 echo $line &
+    #srun --ntasks 1 --job-name=ray-serve --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 hostname &
+done < "$DIR_PATH"
+wait
+jobs
+x="a"
 # for dir in selected dirs
 while read -r file; do
-    echo "$file"
+    echo "PROCESSING FILE: $file"
     if [[ -f $file ]]; then
         # get experiment information from path
         class=$(echo "$file" | grep -oP "$RESULTS_DIR/\K[^/]*")
@@ -17,39 +32,36 @@ while read -r file; do
         trial=$(echo "$file" | grep -oP "$RESULTS_DIR/[^/]*/[^/]*/\K[^/]*")
         check=$(echo "$file" | grep -oP "$RESULTS_DIR/[^/]*/[^/]*/[^/]*/\K[^/]*")
         checkpoint_file=$(echo "$file" | grep -oP "$RESULTS_DIR/[^/]*/[^/]*/[^/]*/[^/]*/\K[^/]*")
-        #file=${file//\//\\\/}
         check_dir_full_path=$(echo "$file" | grep -oP "$RESULTS_DIR/[^/]*/[^/]*/[^/]*/[^/]*")
-        tmp_name="/work/garbus/tmp/$(date +%s)"
-        cp -r "$check_dir_full_path" "$tmp_name"
+        tmp_name="/work/garbus/tmp/$(date +%s)$x"
+        cp -r "$check_dir_full_path" "$tmp_name" &
         tmp_file="$tmp_name/$checkpoint_file"
-        echo "file: $file"
-        #file=${file//\//\\\/}
+        x="$x-a"
         arg_file="/home/garbus/trade/arg_files/$exp.arg"
+        # run serve using arg file inferred from name
         if [[ -f "$arg_file" ]]; then
             args=$(cat "$arg_file")
-                #serve-template.sh > serve.sh
-            chmod +x serve.sh
-            # Use srun instead of sbatch because 
+            # Use srun instead of sbatch so jobs quits if shell is closed
+            #echo "RUNNING COMMAND: srun --job-name=ray-serve --output=serves/serve.log --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 --ntasks-per-node=1 --cpus-per-task=16 ~/miniconda3/envs/trade/bin/python reserve.py --checkpoint $file --tmp-checkpoint $tmp_file $args &"
+            srun --exclusive --ntasks 1 --job-name=ray-serve --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 ~/miniconda3/envs/trade/bin/python reserve.py --checkpoint $file --tmp-checkpoint $tmp_file $args &
+            #srun --exclusive --ntasks 1 --job-name=ray-serve --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 hostname &
+            #srun --exclusive hostname &
 
-            echo "srun --job-name=ray-serve --output=serves/serve.log --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 --ntasks-per-node=1 --cpus-per-task=16 python reserve.py --checkpoint $file --tmp-checkpoint $tmp_file $args"
-
-            echo "srun --job-name=ray-serve --output=serves/serve.log --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 --ntasks-per-node=1 --cpus-per-task=16 ~/miniconda3/envs/trade/bin/python reserve.py --checkpoint $file --tmp-checkpoint $tmp_file $args &"
-            srun --job-name=ray-serve --output=serves/serve.log --account=guest --qos=low-gpu --time=24:00:00 --partition=guest-gpu --gres=gpu:TitanX:1 --ntasks-per-node=1 --cpus-per-task=16 ~/miniconda3/envs/trade/bin/python reserve.py --checkpoint $file --tmp-checkpoint $tmp_file $args &
-
-
-            # sbatch serve.sh
             echo "$class/$exp/$trial/$check" >> $SERVE_PATHS
+            echo "Finished processing"
         else
-            echo "No arg file found"
+            echo "ERROR No arg file found: $arg_file "
         fi
     else
-        echo "File not found: $file"
+        echo "ERROR File not found: $file"
     fi 
 
-
-done < $DIR_PATH
-
+done < "$DIR_PATH"
+jobs
 wait
+
+echo "Finished serving, creating visualizations."
+
 
 while read -r dir; do
     full_dir="/home/garbus/trade/serves/$dir"
@@ -59,4 +71,5 @@ while read -r dir; do
     done
 
 done < $SERVE_PATHS
+jobs
 wait
