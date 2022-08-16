@@ -43,7 +43,7 @@ class TradeCallback(DefaultCallbacks):
         env = base_env.get_unwrapped()[0]
         #if not all(env.dones.values()):
         #    return
-        episode.custom_metrics["grid_size"] = env.grid_size
+        #episode.custom_metrics["grid_size"] = env.grid_size
         for food, count in enumerate(env.mc.num_exchanges):
             episode.custom_metrics[f"exchange_{food}"] = count
         for symbol, count in enumerate(self.comm_history):
@@ -84,11 +84,11 @@ class TradeCallback(DefaultCallbacks):
                 episode.custom_metrics[f"percent_{act}"] = count / total_number_of_actions
         episode.custom_metrics["rew_base_health"] = env.mc.rew_base_health
         episode.custom_metrics["rew_shared_health"] = env.mc.rew_shared_health
-        episode.custom_metrics["rew_nn"] = env.mc.rew_nn
-        episode.custom_metrics["rew_twonn"] = env.mc.rew_twonn
-        episode.custom_metrics["rew_other_survival_bonus"] = env.mc.rew_other_survival_bonus
-        episode.custom_metrics["rew_pun"] = env.mc.rew_pun
-        episode.custom_metrics["rew_mov"] = env.mc.rew_mov
+        #episode.custom_metrics["rew_nn"] = env.mc.rew_nn
+        #episode.custom_metrics["rew_twonn"] = env.mc.rew_twonn
+        #episode.custom_metrics["rew_other_survival_bonus"] = env.mc.rew_other_survival_bonus
+        #episode.custom_metrics["rew_pun"] = env.mc.rew_pun
+        #episode.custom_metrics["rew_mov"] = env.mc.rew_mov
         episode.custom_metrics["rew_light"] = env.mc.rew_light
         episode.custom_metrics["rew_act"] = env.mc.rew_acts
         episode.custom_metrics["rew_ineq"] = env.mc.rew_ineq

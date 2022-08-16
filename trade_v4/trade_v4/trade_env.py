@@ -275,12 +275,14 @@ class Trade(MultiAgentEnv):
             for a in self.agents:
                 if a != agent:
                     num_of_food_types = sum(1 for f in self.agent_food_counts[a] if f >= 0.1)
-                    shared_health += [0, 0, 2][num_of_food_types] * self.share_health
-                    ineq += (shared_health - base_health)
+                    other_health = [0, 0, 2][num_of_food_types]
+                    shared_health += other_health * self.share_health
+                    ineq += max(other_health - base_health, 0)
 
             #health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else -1
         else:
             base_health = 1
+        assert ineq >= 0
 
         light_rew = 0 if self.light.contains(self.agent_positions[agent]) else self.light_coeff * self.light.frame[self.agent_positions[agent]]
 
