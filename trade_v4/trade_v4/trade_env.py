@@ -151,6 +151,7 @@ class Trade(MultiAgentEnv):
         fc = self.food_env_spawn if self.respawn else 10
         #food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
         food_counts = [(0, fc), (1, fc)]
+        self.table[:,:,:,:] = 0
         num_piles = 100
 
         for i in range(num_piles):
