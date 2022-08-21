@@ -152,7 +152,7 @@ if __name__ == "__main__":
             "batch_mode": 'truncate_episodes',
             "lambda": 0.95,
             "gamma": .99,
-            "clip_param": 0.05,
+            "clip_param": 0.03,
             "entropy_coeff": 0.05,
             'vf_loss_coeff': 0.25,
             # These params start off randomly drawn from a set.
