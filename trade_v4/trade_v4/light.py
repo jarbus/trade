@@ -37,7 +37,7 @@ class Light:
             i += 1
             j += 1
         frame = np.full(self.grid_size, self.light_level)
-        frame[fire_light > 0] = np.clip(fire_light[fire_light > 0] - (self.interval * 7), self.light_level, 1)
+        frame[fire_light > 0] = np.clip(fire_light[fire_light > 0] - (self.interval * 6), self.light_level, 1)
         return frame
 
     def step_light(self):
