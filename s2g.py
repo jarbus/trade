@@ -83,7 +83,10 @@ def plot_step(step: Step):
 
     fig.text(vs + 0.05, 1-0.05, "Player           reds      greens")
     fig.text(vs + 0.05, 1-0.07, "-----------------------------------------")
-    fig.text(vs + 0.02, hs+0.03, f"Total Exchanged so far: {step.total_exchanged}", fontsize=8, wrap=True)
+    fig.text(vs + 0.02, hs+0.03, f"Total Exchanged:", fontsize=8, wrap=True)
+    for i, exchanged in enumerate(step.total_exchanged):
+        fig.text(vs + 0.2 + (0.1 * i), hs+0.03, f"{exchanged}",
+                    fontsize=10, wrap=True, family="monospace", color=mul_tuple(food_colors[i], 0.5))
     for i, message in enumerate(all_exchange_messages[-18:]):
         fig.text(vs + 0.02, hs-((i+1)*0.03), f"{message}", fontsize=8, wrap=True)
     for f, fg in enumerate(step.food_grid):
@@ -101,7 +104,7 @@ def plot_step(step: Step):
         color = player_colors[i] if not player.done else "lightgrey"
         fig.text(vs + 0.05, 1-((i+2)*0.05), f"{player.name}", fontsize=10, wrap=True, family="monospace", color=color)
         for j, fc in enumerate(player.food_count):
-            fig.text(vs + 0.20 + (.1 * j), 1-((i+2)*0.05), f"{round(fc, 1)}",
+            fig.text(vs + 0.2 + (.1 * j), 1-((i+2)*0.05), f"{round(fc, 1)}",
                     fontsize=10, wrap=True, family="monospace", color=mul_tuple(food_colors[j], 0.5))
 
 
