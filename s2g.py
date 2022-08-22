@@ -14,6 +14,7 @@ args = parser.parse_args()
 
 player_expr = r"(player_\d): \((\d*), (\d*)\) \[(.*), (.*)\] (.*)$"
 exchange_expr = r"Exchange: (player_\d) gave (\S*) of food (\d) to (player_\d)"
+total_exchange_expr = r"Total exchanged.*: \[(.*), (.*)\]"
 food_expr = r"food(\d):"
 light_expr = r"Light:$"
 
@@ -33,19 +34,21 @@ class Step:
     idx: int
     players: List[Player]
     exchange_messages: List[str]
+    total_exchanged: List[float]
     food_grid: List[List[float]]
     light_grid: List[List[float]]
 
 
 all_exchange_messages = []
 player_colors = ["olivedrab", "darkcyan", "mediumslateblue", "purple"]
-food_colors = ["red", "green"]
-offv = 0.01
+food_colors = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
+offv = 0.04
 player_offsets = (0, offv), (offv, 0), (0, -offv), (-offv, 0)
-food_offsets = (offv, offv), (-offv, -offv)
 grid_offset = (0.01, 0.01)
 def add_tuple(a, b):
     return tuple(i + j for i, j in zip(a, b))
+def mul_tuple(a: Tuple, b: float):
+    return tuple(i * b for i in a)
 
 @gif.frame
 def plot_step(step: Step):
@@ -68,7 +71,6 @@ def plot_step(step: Step):
     for i, row in enumerate(step.light_grid[0]):
         for j, col in enumerate(row):
             l_pos = (i/scale, j/scale)
-            l_pos = add_tuple(l_pos, grid_offset)
             # Add a square at l_pos
             not_yellow = (col + 1)/4
             yellow = (col + 1)/2
@@ -79,33 +81,39 @@ def plot_step(step: Step):
 
 
 
-    fig.text(vs + 0.05, 1-0.05, "Player          fc0     fc1   done")
+    fig.text(vs + 0.05, 1-0.05, "Player           reds      greens")
     fig.text(vs + 0.05, 1-0.07, "-----------------------------------------")
+    fig.text(vs + 0.02, hs+0.03, f"Total Exchanged so far: {step.total_exchanged}", fontsize=8, wrap=True)
     for i, message in enumerate(all_exchange_messages[-18:]):
         fig.text(vs + 0.02, hs-((i+1)*0.03), f"{message}", fontsize=8, wrap=True)
-    for i, player in enumerate(step.players):
-        color = player_colors[i] if not player.done else "lightgrey"
-        fig.text(vs + 0.05, 1-((i+2)*0.05), f"{player}", fontsize=10, wrap=True, family="monospace", color=color)
-        p_pos = tuple(p / scale for p in player.pos)
-        p_pos = add_tuple(p_pos, player_offsets[i])
-        p_pos = add_tuple(p_pos, grid_offset)
-        radius = 0.03
-        # circ = plt.Circle(p_pos, radius=radius, color=color, fill=True)
-        circ = plt.Rectangle(p_pos, radius, radius, color=color, fill=True)
-        grid.add_patch(circ)
-        if player.done:
-            grid.text(*add_tuple(p_pos, (-radius/1.5, -radius/1.5)), f"{i}", fontsize=10, wrap=True, family="monospace")
-        grid.add_patch(circ)
     for f, fg in enumerate(step.food_grid):
         for row, frow in enumerate(fg):
             for col, fcount in enumerate(frow):
                 if fcount <= 0:
                     continue
                 f_pos = (row/scale, col/scale)
-                f_pos = add_tuple(f_pos, food_offsets[f])
-                f_pos = add_tuple(f_pos, grid_offset)
-                circ = plt.Circle(f_pos, radius=0.01+(0.02*fcount/scale), color=food_colors[f], fill=True)
+                radius = 1/scale
+                # Add base food color value with a scalar
+                color = add_tuple(mul_tuple(food_colors[f], 0.2), mul_tuple(food_colors[f], fcount/4))
+                circ = plt.Rectangle(f_pos, radius, radius, color=color, fill=True)
                 grid.add_patch(circ)
+    for i, player in enumerate(step.players):
+        color = player_colors[i] if not player.done else "lightgrey"
+        fig.text(vs + 0.05, 1-((i+2)*0.05), f"{player.name}", fontsize=10, wrap=True, family="monospace", color=color)
+        for j, fc in enumerate(player.food_count):
+            fig.text(vs + 0.20 + (.1 * j), 1-((i+2)*0.05), f"{round(fc, 1)}",
+                    fontsize=10, wrap=True, family="monospace", color=mul_tuple(food_colors[j], 0.5))
+
+
+        p_pos = tuple(p / scale for p in player.pos)
+        p_pos = add_tuple(p_pos, player_offsets[i])
+        radius = 0.5/scale
+        # circ = plt.Circle(p_pos, radius=radius, color=color, fill=True)
+        circ = plt.Rectangle(p_pos, radius, radius, color=color, fill=True)
+        grid.add_patch(circ)
+        if player.done:
+            grid.text(*add_tuple(p_pos, (-radius/1.5, -radius/1.5)), f"{i}", fontsize=10, wrap=True, family="monospace")
+        grid.add_patch(circ)
 
 
 
@@ -126,7 +134,7 @@ frames = []
 num_steps = len(step_slices)
 # num_steps = 10  # len(step_slices)
 for i in range(num_steps):
-    step = Step(i, [], [], [], [])
+    step = Step(i, [],[], [], [], [])
     food = 0
     grid = step.food_grid
     for line in lines[step_slices[i]]:
@@ -145,6 +153,9 @@ for i in range(num_steps):
             step.food_grid.append([])
             grid = step.food_grid
 
+        if m := re.match(total_exchange_expr, line):
+            total_exchanged = m.groups()
+            step.total_exchanged = [float(f) for f in total_exchanged]
 
         if m := re.match(light_expr, line):
             # light = m.groups()[0]
