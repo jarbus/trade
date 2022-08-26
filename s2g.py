@@ -49,6 +49,8 @@ def add_tuple(a, b):
     return tuple(i + j for i, j in zip(a, b))
 def mul_tuple(a: Tuple, b: float):
     return tuple(i * b for i in a)
+def clip_tuple(min_: float, tup: Tuple, max_f: float):
+    return tuple(min(max(min_, t), max_f) for t in tup)
 
 @gif.frame
 def plot_step(step: Step):
@@ -98,6 +100,7 @@ def plot_step(step: Step):
                 radius = 1/scale
                 # Add base food color value with a scalar
                 color = add_tuple(mul_tuple(food_colors[f], 0.2), mul_tuple(food_colors[f], fcount/4))
+                color = clip_tuple(0.0, color, 1.0)
                 circ = plt.Rectangle(f_pos, radius, radius, color=color, fill=True)
                 grid.add_patch(circ)
     for i, player in enumerate(step.players):
