@@ -184,7 +184,7 @@ class Trade(MultiAgentEnv):
             if comm and max(comm) >= 1:
                 out.write(f"{agent} said {comm.index(1)}\n")
 
-    def compute_observation(self, agent=None):
+    def compute_observation(self, agent):
         ax, ay = self.agent_positions[agent]
         wx, wy = self.window_size
         gx, gy = self.grid_size
@@ -250,27 +250,20 @@ class Trade(MultiAgentEnv):
         dists = [0, 0]
         other_survival_bonus = 0
         punishment = 0
-        for aid, a in enumerate(self.agents):
-            if not self.compute_done(a) and a != agent:
-                dists.append(inv_dist(pos, self.agent_positions[a]))
-                other_survival_bonus += self.survival_bonus
-                punishment += self.punish_frames[aid, pos[0], pos[1]]
-        dists.sort()
 
         base_health = 0
         shared_health = 0
         ineq = 0
         if self.health_baseline:
             num_of_food_types = sum(1 for f in self.agent_food_counts[agent] if f >= 0.1)
-            base_health = [0, 0.5, 1][num_of_food_types]
+            base_health = [0, 0.3, 1][num_of_food_types]
             for a in self.agents:
                 if a != agent:
                     num_of_food_types = sum(1 for f in self.agent_food_counts[a] if f >= 0.1)
-                    other_health = [0, 0.5, 1][num_of_food_types]
+                    other_health = [0, 0.3, 1][num_of_food_types]
                     shared_health += other_health * self.share_health
                     ineq += max(other_health - base_health, 0)
 
-            #health = 1 if min(self.agent_food_counts[agent]) >= 0.1 else -1
         else:
             base_health = 1
         assert ineq >= 0
@@ -287,7 +280,7 @@ class Trade(MultiAgentEnv):
         # Remember to update this function whenever you add a new reward
         self.mc.collect_rew(self, base_health, shared_health, nn_rew, twonn_rew, other_survival_bonus, pun_rew, mov_rew, light_rew, act_rew, ineq_rew)
 
-        rew  = base_health + shared_health + nn_rew + twonn_rew + other_survival_bonus + pun_rew + mov_rew + light_rew + act_rew + ineq_rew
+        rew  = base_health + light_rew + act_rew
         return rew
 
     def compute_exchange_amount(self, x: int, y: int, food: int, picker: int):
