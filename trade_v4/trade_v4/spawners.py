@@ -179,6 +179,8 @@ class FoodSpawner(BaseSpawnGenerator):
             pos = add_tuple(center, sample_pos)
             if 0 <= pos[0] < self.gx and 0 <= pos[1] < self.gy:
                 poses.append(pos)
+            else:
+                poses.append(center)
         return poses
             
             

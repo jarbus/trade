@@ -126,7 +126,9 @@ class Trade(MultiAgentEnv):
 
         self.agent_spawner = FireCornerSpawner(self.grid_size, self.fires)
 
-        self.food_spawner = FoodSpawner(self.grid_size, self.foods) 
+        # Get rid of food type indicator for the spawner
+        food_centers = [(fc[1], fc[2]) for fc in self.foods]
+        self.food_spawner = FoodSpawner(self.grid_size, food_centers) 
 
         self.action_space = Discrete(self.num_actions)
         self.obs_size = (*add_tup(add_tup(self.window_size, self.window_size), (1, 1)), self.channels)
@@ -140,7 +142,7 @@ class Trade(MultiAgentEnv):
     def generate_food(self):
         fc = self.food_env_spawn if self.respawn else 10
         #food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
-        food_counts = [(0, fc), (1, fc)]
+        food_counts = [(f[0], fc) for f in self.foods]
         self.table[:,:,:,:] = 0
         num_piles = 100
 

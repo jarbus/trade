@@ -28,7 +28,7 @@ def generate_configs():
         "share_health": args.share_health,
         "respawn": args.respawn,
         "fires": [(args.fires[i], args.fires[i+1]) for i in range(0, len(args.fires), 2)],
-        "foods": [(args.foods[i], args.foods[i+1]) for i in range(0, len(args.foods), 2)],
+        "foods": [(*args.foods[i:i+3],) for i in range(0, len(args.foods), 3)],
         "survival_bonus": args.survival_bonus,
         "health_baseline": args.health_baseline,
         "punish": args.punish,
