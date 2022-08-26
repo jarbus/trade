@@ -6,7 +6,7 @@ from math import floor
 from .utils import add_tup, directions, valid_pos, inv_dist, punish_region
 from pdb import set_trace as T
 from .light import Light
-from .spawners import CenterSpawner, FourCornerSpawner, RandomSpawner, FilledCornerSpawner, DoubleCenterSpawner, DoubleFilledCornerSpawner
+from .spawners import FireCornerSpawner, FoodSpawner
 import sys
 from collections import defaultdict
 
@@ -82,13 +82,13 @@ class Trade(MultiAgentEnv):
         self.death_prob            = env_config.get("death_prob", 0.1)
         self.day_night_cycle       = env_config.get("day_night_cycle", False)
         self.day_steps             = env_config.get("day_steps", 20)
+        self.fires                 = env_config.get("fires")
+        self.foods                 = env_config.get("foods")
         self.night_time_death_prob = env_config.get("night_time_death_prob", 0.1)
         self.punish                = env_config.get("punish", False)
         self.punish_coeff          = env_config.get("punish_coeff", 3)
         self.survival_bonus        = env_config.get("survival_bonus", 0.0)
         self.respawn               = env_config.get("respawn", False)
-        self.spawn_agents          = env_config.get("spawn_agents", "center")
-        self.spawn_food            = env_config.get("spawn_food", "corner")
         self.twonn_coeff           = env_config.get("twonn_coeff", 0.0)
         self.ineq_coeff            = env_config.get("ineq_coeff", 0.0)
         self.light_coeff           = env_config.get("light_coeff", 1.0)
@@ -99,7 +99,7 @@ class Trade(MultiAgentEnv):
         self.food_agent_start      = env_config.get("food_agent_start", 1)
         self.share_health          = env_config.get("share_health")
         self.padded_grid_size      = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
-        self.light                 = Light(self.grid_size, 2/self.day_steps)
+        self.light                 = Light(self.grid_size, [(self.grid_size[0]//2, self.grid_size[1]//2)], 2/self.day_steps)
         super().__init__()
 
 
@@ -124,19 +124,9 @@ class Trade(MultiAgentEnv):
         self.num_actions = len(self.MOVES)
         self.communications = {}
 
-        self.agent_spawner = {
-            "center": CenterSpawner(self.grid_size),
-            "doublecenter": DoubleCenterSpawner(self.grid_size),
-            "corner": FourCornerSpawner(self.grid_size),
-            "random": RandomSpawner(self.grid_size)
-        }[self.spawn_agents]
+        self.agent_spawner = FireCornerSpawner(self.grid_size, self.fires)
 
-        self.food_spawner = {
-            "corner": FilledCornerSpawner(self.grid_size),
-            "doublecorner": DoubleFilledCornerSpawner(self.grid_size)
-        }[self.spawn_food]
-
-
+        self.food_spawner = FoodSpawner(self.grid_size, self.foods) 
 
         self.action_space = Discrete(self.num_actions)
         self.obs_size = (*add_tup(add_tup(self.window_size, self.window_size), (1, 1)), self.channels)

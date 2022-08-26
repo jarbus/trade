@@ -13,6 +13,8 @@ def get_args():
     parser.add_argument('--class-name', type=str, default="class")
     parser.add_argument('--spawn-agents', type=str, help="[center, corner, random]", default="center")
     parser.add_argument('--spawn-food', type=str, help="[corner, doublecorner]", default="corner")
+    parser.add_argument('--fires', nargs='+', type=int, help="x,y of fires")
+    parser.add_argument('--foods', nargs='+', type=int, help="x,y of foods")
     parser.add_argument('--batch-size', type=int, default=500)
     parser.add_argument('--day-night-cycle', action="store_true")
     parser.add_argument('--day-steps', type=int, default=20)

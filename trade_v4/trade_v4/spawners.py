@@ -1,13 +1,17 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import math
-from .utils import two_combos, valid_pos
+#from .utils import two_combos, valid_pos
 from random import shuffle, choice, randint, random
 from itertools import product
+from typing import List, Tuple
 
 FIRE_LIGHT_LEVEL = 0.1
 MAX_LIGHT_LEVEL = 1
 STARTING_LIGHT_LEVEL = 0
+
+def add_tuple(t0, t1):
+    return t0[0] + t1[0], t0[1] + t1[1]
 
 class BaseSpawnGenerator(metaclass=ABCMeta):
     def __init__(self, grid_size):
@@ -97,17 +101,17 @@ class DoubleFilledCornerSpawner(BaseSpawnGenerator):
 
 
 
-class FourCornerSpawner(BaseSpawnGenerator):
-    def __init__(self, grid_size):
-        self.gx, self.gy = grid_size
-        self.spawn_spots = [[(0,1,2), (0, 1,2)], [(0,1,2), (self.gy-3, self.gy-2, self.gy-1)], [(self.gx-3, self.gx-2, self.gx-1), (0,1,2)], [(self.gx-3, self.gx-2,self.gx-1), (self.gy-3,self.gy-2,self.gy-1)]]
-        self.spawn_spots = [two_combos(xs, ys) for (xs, ys) in self.spawn_spots]
-
-    def reset(self):
-        shuffle(self.spawn_spots)
-
-    def gen_poses(self):
-        return [choice(spot) for spot in self.spawn_spots]
+#class FourCornerSpawner(BaseSpawnGenerator):
+#    def __init__(self, grid_size):
+#        self.gx, self.gy = grid_size
+#        self.spawn_spots = [[(0,1,2), (0, 1,2)], [(0,1,2), (self.gy-3, self.gy-2, self.gy-1)], [(self.gx-3, self.gx-2, self.gx-1), (0,1,2)], [(self.gx-3, self.gx-2,self.gx-1), (self.gy-3,self.gy-2,self.gy-1)]]
+#        self.spawn_spots = [two_combos(xs, ys) for (xs, ys) in self.spawn_spots]
+#
+#    def reset(self):
+#        shuffle(self.spawn_spots)
+#
+#    def gen_poses(self):
+#        return [choice(spot) for spot in self.spawn_spots]
 
 
 class FilledCornerSpawner(BaseSpawnGenerator):
@@ -143,14 +147,78 @@ class FilledCornerSpawner(BaseSpawnGenerator):
     def gen_poses(self):
         return [self.sample_corner_point(corner) for corner in self.corners]
 
+class FoodSpawner(BaseSpawnGenerator):
+    def __init__(self, grid_size: tuple, food_centers: List[Tuple]):
+        self.gx, self.gy = grid_size
+        self.food_centers = food_centers
+        self.food_radius = 3
+        self.radii = list(range(self.food_radius))
+        # Precomputing this
+        self.offsets, self.probs = dict(), dict()
+        for r in self.radii[1:]:
+            self.offsets[r] = list(range(-r, r+1))
+            self.probs[r] = [1/(len(self.offsets[r])-1) for _ in self.offsets[r]]
+            # Need to half probabilities of placing on corners
+            self.probs[r][0] /= 2
+            self.probs[r][-1] /= 2
+
+    def sample_pos(self, radius):
+        if radius == 0:
+            return (0, 0)
+        ax_0 = choice([radius, -radius])
+        ax_1 = np.random.choice(self.offsets[radius], p=self.probs[radius])
+        pos = [ax_0, ax_1]
+        shuffle(pos)
+        return tuple(pos)
+
+    def gen_poses(self):
+        poses = []
+        for center in self.food_centers:
+            radius = np.random.choice(self.radii, p=[0.2, 0.4, 0.4])
+            sample_pos = self.sample_pos(radius)
+            pos = add_tuple(center, sample_pos)
+            if 0 <= pos[0] < self.gx and 0 <= pos[1] < self.gy:
+                poses.append(pos)
+        return poses
+            
+            
+
+
+
+
+        
+
+class FireCornerSpawner(BaseSpawnGenerator):
+    def __init__(self, grid_size: tuple, fires: List[Tuple]):
+        self.gx, self.gy = grid_size
+        self.fires = fires
+
+
+    def gen_poses(self, n=4):
+        poses = []
+        for fire in self.fires:
+            fire_poses = [(fire[0]-1, fire[1]-1), (fire[0]-1, fire[0]+1),
+                            (fire[0]+1, fire[0]-1), (fire[0]+1, fire[0]+1)]
+            for pos in fire_poses:
+                if 0 <= pos[0] < self.gx and 0 <= pos[1] < self.gy:
+                    poses.append(pos)
+                else:
+                    raise ValueError(f"FireCornerSpawner tried to spawn at {pos}")
+        return poses
+
+
 if __name__ == "__main__":
     size = (11,11)
-    fc = DoubleFilledCornerSpawner(size)
+    fc = FoodSpawner(size, [(1,1), (8,8)])
     x = np.zeros(size)
     import matplotlib.pyplot as plt
+    import time
+    start = time.time()
     for i in range(100):
         for pos in fc.gen_poses():
             x[pos] += 0.1
     import matplotlib.pyplot as plt
+    print(time.time() - start)
     plt.matshow(x)
     plt.show()
+    print(x.round(2))
