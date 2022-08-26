@@ -69,7 +69,8 @@ def generate_configs():
     POLICY_SET = {
         1: {"pol1": gen_policy(0)},
         2: {"pol1": gen_policy(0), "pol2": gen_policy(1)},
-        4: {f"player_{a}": gen_policy(a) for a in range(num_agents)}
+        4: {f"player_{a}": gen_policy(a) for a in range(num_agents)},
+        8: {f"player_{a}": gen_policy(a) for a in range(num_agents)},
     }
 
 
@@ -117,11 +118,12 @@ if __name__ == "__main__":
     if args.ip:
         ray.init(address=args.ip, _redis_password="longredispassword")
 
+    env_config, policies, policy_mapping_fn = generate_configs()
+
     env_name = "trade_v4"
 
     register_env(env_name, lambda config: Trade(config))
 
-    env_config, policies, policy_mapping_fn = generate_configs()
     batch_size = args.batch_size
 
     tune.run(

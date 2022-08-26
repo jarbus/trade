@@ -23,5 +23,6 @@ def punish_region(x, y, gx, gy):
 POLICY_MAPPING_FN = {
     1: lambda aid, **kwargs: "pol1",
     2: lambda aid, **kwargs: "pol1" if aid in {"player_0", "player_1"} else "pol2",
-    4: lambda aid, **kwargs: aid
+    4: lambda aid, **kwargs: aid,
+    8: lambda aid, **kwargs: aid,
 }
