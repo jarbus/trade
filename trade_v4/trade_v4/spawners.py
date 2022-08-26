@@ -199,8 +199,8 @@ class FireCornerSpawner(BaseSpawnGenerator):
     def gen_poses(self, n=4):
         poses = []
         for fire in self.fires:
-            fire_poses = [(fire[0]-1, fire[1]-1), (fire[0]-1, fire[0]+1),
-                            (fire[0]+1, fire[0]-1), (fire[0]+1, fire[0]+1)]
+            fire_poses = [(fire[0]-1, fire[1]-1), (fire[0]-1, fire[1]+1),
+                            (fire[0]+1, fire[1]-1), (fire[0]+1, fire[1]+1)]
             for pos in fire_poses:
                 if 0 <= pos[0] < self.gx and 0 <= pos[1] < self.gy:
                     poses.append(pos)
