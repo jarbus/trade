@@ -40,10 +40,11 @@ class Step:
 
 
 all_exchange_messages = []
-player_colors = ["olivedrab", "darkcyan", "mediumslateblue", "purple"]
+player_colors = ["olivedrab", "darkcyan", "mediumslateblue", "purple", "brown", "navajowhite", "plum", "gray"]
 food_colors = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
-offv = 0.04
-player_offsets = (0, offv), (offv, 0), (0, -offv), (-offv, 0)
+offv = 0.015
+player_offsets = (0, offv), (offv, 0), (0, -offv), (-offv, 0),\
+        (offv, offv), (offv, -offv), (-offv, offv), (-offv, -offv)
 grid_offset = (0.01, 0.01)
 def add_tuple(a, b):
     return tuple(i + j for i, j in zip(a, b))
@@ -72,7 +73,7 @@ def plot_step(step: Step):
     fig.text(0, 0.95, f"Step {step.idx}", fontsize=12, wrap=True)
     for i, row in enumerate(step.light_grid[0]):
         for j, col in enumerate(row):
-            l_pos = (i/scale, j/scale)
+            l_pos = (j/scale, i/scale)
             # Add a square at l_pos
             not_yellow = (col + 1)/4
             yellow = (col + 1)/2
@@ -96,7 +97,7 @@ def plot_step(step: Step):
             for col, fcount in enumerate(frow):
                 if fcount <= 0:
                     continue
-                f_pos = (row/scale, col/scale)
+                f_pos = (col/scale, row/scale)
                 radius = 1/scale
                 # Add base food color value with a scalar
                 color = add_tuple(mul_tuple(food_colors[f], 0.2), mul_tuple(food_colors[f], fcount/4))
@@ -105,13 +106,15 @@ def plot_step(step: Step):
                 grid.add_patch(circ)
     for i, player in enumerate(step.players):
         color = player_colors[i] if not player.done else "lightgrey"
-        fig.text(vs + 0.05, 1-((i+2)*0.05), f"{player.name}", fontsize=10, wrap=True, family="monospace", color=color)
+        fig.text(vs + 0.05, 1-0.02-((i+2)*0.035), f"{player.name}", fontsize=10, wrap=True, family="monospace", color=color)
         for j, fc in enumerate(player.food_count):
-            fig.text(vs + 0.2 + (.1 * j), 1-((i+2)*0.05), f"{round(fc, 1)}",
+            fig.text(vs + 0.2 + (.1 * j), 1-0.02-((i+2)*0.035), f"{round(fc, 1)}",
                     fontsize=10, wrap=True, family="monospace", color=mul_tuple(food_colors[j], 0.5))
 
 
-        p_pos = tuple(p / scale for p in player.pos)
+        p_pos = tuple(p / scale for p in reversed(player.pos))
+
+        p_pos = add_tuple(p_pos, (0.15/scale, 0.15/scale))
         p_pos = add_tuple(p_pos, player_offsets[i])
         radius = 0.5/scale
         # circ = plt.Circle(p_pos, radius=radius, color=color, fill=True)
