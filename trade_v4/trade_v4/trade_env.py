@@ -99,7 +99,7 @@ class Trade(MultiAgentEnv):
         self.food_agent_start      = env_config.get("food_agent_start", 1)
         self.share_health          = env_config.get("share_health")
         self.padded_grid_size      = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
-        self.light                 = Light(self.grid_size, [(self.grid_size[0]//2, self.grid_size[1]//2)], 2/self.day_steps)
+        self.light                 = Light(self.grid_size, self.fires, 2/self.day_steps)
         super().__init__()
 
 
