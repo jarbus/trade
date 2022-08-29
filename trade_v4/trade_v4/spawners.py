@@ -174,13 +174,19 @@ class FoodSpawner(BaseSpawnGenerator):
     def gen_poses(self):
         poses = []
         for center in self.food_centers:
-            radius = np.random.choice(self.radii, p=[0.2, 0.4, 0.4])
-            sample_pos = self.sample_pos(radius)
-            pos = add_tuple(center, sample_pos)
-            if 0 <= pos[0] < self.gx and 0 <= pos[1] < self.gy:
-                poses.append(pos)
-            else:
-                poses.append(center)
+            radius = np.random.choice(self.radii, p=[0.3, 0.5, 0.2])
+            i = 0
+            while i < 1000:
+                i += 1
+                sample_pos = self.sample_pos(radius)
+                pos = add_tuple(center, sample_pos)
+                if 0 <= pos[0] < self.gx and 0 <= pos[1] < self.gy:
+                    poses.append(pos)
+                    break
+            if i >= 1000:
+                raise RuntimeError("Could not spawn a single food in 1000 tries.")
+            # else:
+            #     poses.append(center)
         return poses
             
             
@@ -211,7 +217,7 @@ class FireCornerSpawner(BaseSpawnGenerator):
 
 if __name__ == "__main__":
     size = (11,11)
-    fc = FoodSpawner(size, [(1,1), (8,8)])
+    fc = FoodSpawner(size, [(0,0), (10,10), (5,5)])
     x = np.zeros(size)
     import matplotlib.pyplot as plt
     import time
