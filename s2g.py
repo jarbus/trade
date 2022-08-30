@@ -170,9 +170,9 @@ for i in range(num_steps):
             # light = m.groups()[0]
             step.light_grid.append([])
             grid = step.light_grid
-        # Food
+        # Food and Light
         if line.strip().startswith("["):
-            grid[-1].append([float(f) for f in line.strip().replace("[", "").replace("]", "").split()])
+            grid[-1].append([float(f) for f in line.strip().replace("[", "").replace("]", "").replace(",","").split()])
 
     frame = plot_step(step)
     frames.append(frame)
