@@ -25,7 +25,9 @@ if [ "$1" != "--download-only" ]; then
     while read -r dir; do
       download "$dir"
     done < /tmp/most-recent-serve-dirs.txt
-    cd "/home/jack/s4/TradeEnv/trade/serves/$(fzf < /tmp/most-recent-serve-dirs.txt)"
+    if [[ -s "/tmp/most-recent-serve-dirs.txt" ]]; then
+      cd "/home/jack/s4/TradeEnv/trade/serves/$(fzf < /tmp/most-recent-serve-dirs.txt)"
+    fi
 else
     echo "Download only $2"
     ssh hpcc -t "source .bashrc; cd /home/garbus/trade; bash select-serves.sh"

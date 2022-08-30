@@ -189,6 +189,20 @@ class FoodSpawner(BaseSpawnGenerator):
             #     poses.append(center)
         return poses
             
+class DiscreteFoodSpawner(BaseSpawnGenerator):
+    def __init__(self, grid_size: tuple, food_centers: List[Tuple]):
+        self.gx, self.gy = grid_size
+        self.food_centers = food_centers
+        self.radius = 2
+        # Precomputing this
+
+    def gen_poses(self):
+        poses = []
+        for center in self.food_centers:
+            x = randint(max(center[0]-self.radius, 0), min(center[0]+self.radius, self.gx-1))
+            y = randint(max(center[1]-self.radius, 0), min(center[1]+self.radius, self.gy-1))
+            poses.append((x,y))
+        return poses
             
 
 

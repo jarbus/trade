@@ -6,7 +6,7 @@ from math import floor
 from .utils import add_tup, directions, valid_pos, inv_dist, punish_region
 from pdb import set_trace as T
 from .light import Light
-from .spawners import FireCornerSpawner, FoodSpawner
+from .spawners import FireCornerSpawner, FoodSpawner, DiscreteFoodSpawner
 import sys
 from collections import defaultdict
 
@@ -129,6 +129,7 @@ class Trade(MultiAgentEnv):
         # Get rid of food type indicator for the spawner
         food_centers = [(fc[1], fc[2]) for fc in self.foods]
         self.food_spawner = FoodSpawner(self.grid_size, food_centers) 
+        self.food_spawner = DiscreteFoodSpawner(self.grid_size, food_centers) 
 
         self.action_space = Discrete(self.num_actions)
         self.obs_size = (*add_tup(add_tup(self.window_size, self.window_size), (1, 1)), self.channels)
@@ -144,7 +145,7 @@ class Trade(MultiAgentEnv):
         #food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
         food_counts = [(f[0], fc) for f in self.foods]
         self.table[:,:,:,:] = 0
-        num_piles = 100
+        num_piles = int(fc)
 
         for i in range(num_piles):
             spawn_spots = self.food_spawner.gen_poses()
