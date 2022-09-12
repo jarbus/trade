@@ -1,11 +1,8 @@
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gym.spaces import Discrete, Box
 import numpy as np
-from itertools import cycle
-from random import random, shuffle
 from math import floor
-from .utils import add_tup, directions, valid_pos, inv_dist, punish_region
-from pdb import set_trace as T
+from .utils import add_tup, directions, valid_pos, inv_dist, punish_region, matchup_shuffler
 from .light import Light
 from .spawners import FireCornerSpawner, FoodSpawner, DiscreteFoodSpawner
 import sys
@@ -132,11 +129,11 @@ class Trade(MultiAgentEnv):
         self.obs_size = (*add_tup(add_tup(self.window_size, self.window_size), (1, 1)), self.channels)
         self.observation_space = Box(low=np.full(self.obs_size, -1, dtype=np.float32), high=np.full(self.obs_size, 10))
         self._skip_env_checking = True
-        self.matchup_iterator = cycle(self.matchups)
+        self.matchup_iterator = matchup_shuffler(self.matchups)
 
     def set_matchups(self, matchups: List[Tuple[str, str]]):
         self.matchups = matchups
-        self.matchup_iterator = cycle(self.matchups)
+        self.matchup_iterator = matchup_shuffler(self.matchups)
         self.reset()
 
     def seed(self, seed=None):
