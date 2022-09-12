@@ -243,7 +243,7 @@ if __name__ == "__main__":
             rews = np.array([pol[0] for pol in pop])
             probs = rews - rews.min()
             if probs.sum() == 0:
-                probs = np.array([1.0])
+                probs = np.array([1/len(probs) for _ in probs])
             else:
                 probs = probs / probs.sum()
             # Create mutated copies of selected policies 
