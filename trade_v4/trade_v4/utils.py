@@ -20,9 +20,11 @@ def punish_region(x, y, gx, gy):
     return x_region, y_region
 
 
-POLICY_MAPPING_FN = {
-    1: lambda aid, **kwargs: "pol1",
-    2: lambda aid, **kwargs: "pol1" if aid in {"player_0", "player_1"} else "pol2",
-    4: lambda aid, **kwargs: aid,
-    8: lambda aid, **kwargs: aid,
-}
+#POLICY_MAPPING_FN = {
+#    1: lambda aid, **kwargs: "pol1",
+#    2: lambda aid, **kwargs: "pol1" if aid in {"player_0", "player_2"} else "pol2",
+#    4: lambda aid, **kwargs: aid,
+#    8: lambda aid, **kwargs: aid,
+#}
+def POLICY_MAPPING_FN(aid: str, *args ,**kwargs) -> str:
+    return aid

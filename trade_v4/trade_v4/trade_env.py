@@ -1,6 +1,7 @@
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gym.spaces import Discrete, Box
 import numpy as np
+from itertools import cycle
 from random import random, shuffle
 from math import floor
 from .utils import add_tup, directions, valid_pos, inv_dist, punish_region
@@ -9,7 +10,7 @@ from .light import Light
 from .spawners import FireCornerSpawner, FoodSpawner, DiscreteFoodSpawner
 import sys
 from collections import defaultdict
-
+from typing import List, Tuple, Dict
 
 class TradeMetricCollector():
     def __init__(self, env):
@@ -70,10 +71,11 @@ class Trade(MultiAgentEnv):
     action_space = Discrete(2)
 
     def __init__(self, env_config):
-        print(f"Creating Trade environment {env_config}")
+        #print(f"Creating Trade environment {env_config}")
         gx, gy = self.grid_size    = env_config.get("grid", (7, 7))
         self.food_types            = env_config.get("food_types", 2)
-        num_agents                 = env_config.get("num_agents", 2)
+        #num_agents                 = env_config.get("num_agents", 2)
+        self.matchups           = env_config.get("matchups")
         self.max_steps             = env_config.get("episode_length", 100)
         self.vocab_size            = env_config.get("vocab_size", 0)
         self.window_size           = env_config.get("window", (3, 3))
@@ -103,14 +105,9 @@ class Trade(MultiAgentEnv):
         super().__init__()
 
 
-        self.possible_agents = ["player_" + str(r) for r in range(num_agents)]
-        self.agents = self.possible_agents[:]
-        self.agent_group_mapping = defaultdict(list)
-        for agent in self.agents:
-            self.agent_group_mapping[self.policy_mapping_fn(agent)].append(agent)
-        self.policies = sorted(list(self.agent_group_mapping.keys()))
+
         # (self + policies) * (food frames and pos frame)
-        food_frame_and_agent_channels = (len(self.agent_group_mapping.keys())+1) * (self.food_types+1)
+        food_frame_and_agent_channels = (2) * (self.food_types+1)
         # x, y + agents_and_foods + food frames + comms
         self.channels = 2 + food_frame_and_agent_channels + (self.food_types) + (self.vocab_size) + int(self.punish) + int(self.day_night_cycle)
         self.agent_food_counts = dict()
@@ -135,6 +132,12 @@ class Trade(MultiAgentEnv):
         self.obs_size = (*add_tup(add_tup(self.window_size, self.window_size), (1, 1)), self.channels)
         self.observation_space = Box(low=np.full(self.obs_size, -1, dtype=np.float32), high=np.full(self.obs_size, 10))
         self._skip_env_checking = True
+        self.matchup_iterator = cycle(self.matchups)
+
+    def set_matchups(self, matchups: List[Tuple[str, str]]):
+        self.matchups = matchups
+        self.matchup_iterator = cycle(self.matchups)
+        self.reset()
 
     def seed(self, seed=None):
         if seed:
@@ -155,8 +158,14 @@ class Trade(MultiAgentEnv):
 
     def reset(self):
 
+
+        if self.matchups == [] or self.matchups == [()]:
+            return {}
+
         self.light.reset()
-        self.agents = self.possible_agents[:]
+        self.agents = list(next(self.matchup_iterator)) # self.possible_agents[:]
+        print(f"Running env with agents {self.agents}")
+        # print(f"resetting env with {self.agents}")
         self.action_rewards = {a: 0 for a in self.agents}
         self.dones = {agent: False for agent in self.agents}
         self.moved_last_turn = {agent: False for agent in self.agents}
@@ -203,8 +212,8 @@ class Trade(MultiAgentEnv):
         self_pos_frame   = np.zeros(self.grid_size, dtype=np.float32)
         self_pos_frame[ax, ay] = 1
         self_food_frames = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
-        pol_pos_frames   = {p: np.zeros(self.grid_size, dtype=np.float32) for p in self.policies}
-        pol_food_frames  = {p: np.zeros((self.food_types, *self.grid_size), dtype=np.float32) for p in self.policies}
+        pol_pos_frames   = np.zeros(self.grid_size, dtype=np.float32)
+        pol_food_frames  = np.zeros((self.food_types, *self.grid_size), dtype=np.float32)
         for i, a in enumerate(self.agents):
             if self.compute_done(a):
                 continue
@@ -212,13 +221,12 @@ class Trade(MultiAgentEnv):
             comm_frames[:, oax, oay] = self.communications[a]
 
             if a != agent:
-                pol = self.policy_mapping_fn(a)
-                pol_pos_frames[pol][oax, oay] += 1
-                pol_food_frames[pol][:, oax, oay] += self.agent_food_counts[a]
+                pol_pos_frames[oax, oay] += 1
+                pol_food_frames[:, oax, oay] += self.agent_food_counts[a]
             else:
                 self_food_frames[:,  oax, oay] += self.agent_food_counts[a]
 
-        pol_frames = np.concatenate([np.stack([*pol_food_frames[p], pol_pos_frames[p]]) for p in self.policies])
+        pol_frames = np.stack([*pol_food_frames, pol_pos_frames])
         agent_and_food_frames = np.stack([*pol_frames, self_pos_frame, *self_food_frames])
 
         if self.punish:
@@ -314,6 +322,10 @@ class Trade(MultiAgentEnv):
 
     def step(self, actions):
         # placed goods will not be available until next turn
+        for agent in actions.keys():
+            if agent not in self.agents:
+                breakpoint()
+                print(f"ERROR: received act for {agent} which is not in {self.agents}")
         gx, gy = self.grid_size
         for agent, action in actions.items():
             self.action_rewards[agent] = 0
@@ -368,7 +380,7 @@ class Trade(MultiAgentEnv):
 
         obs = {self.next_agent(agent): self.compute_observation(self.next_agent(agent)) for agent in actions.keys()}
         dones = {agent: self.compute_done(agent) for agent in actions.keys()}
-        self.mc.collect_lifetimes(dones)
+        # self.mc.collect_lifetimes(dones)
         rewards = {self.next_agent(agent): self.compute_reward(self.next_agent(agent)) for agent in actions.keys()}
 
         dones = {**dones, "__all__": all(dones.values())}
