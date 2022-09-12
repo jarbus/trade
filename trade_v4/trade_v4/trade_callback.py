@@ -1,14 +1,15 @@
 import numpy as np
 from ray.rllib.agents.callbacks import DefaultCallbacks
 from .utils import inv_dist
+from collections import defaultdict
 class TradeCallback(DefaultCallbacks):
 
     def on_episode_start(self, worker, base_env, policies, episode, **kwargs):
         env = base_env.get_unwrapped()[0]
         self.comm_history = [0 for i in range(env.vocab_size)]
         self.agent_dists = []
-        self.action_counts = {act: 0 for act in env.MOVES}
-        self.punish_counts = {agent: 0 for agent in env.agents}
+        self.action_counts = defaultdict(int, [(act, 0) for act in env.MOVES])
+        self.punish_counts = defaultdict(int, [(agent, 0) for agent in env.agents])
 
     def on_episode_step(self, worker, base_env, policies, episode, **kwargs):
         # there is a bug where on_episode_step gets called where it shouldn't

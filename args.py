@@ -7,8 +7,10 @@ def get_args():
     parser.add_argument('--tmp-checkpoint', type=str)  # for serves only
     parser.add_argument('--ip', type=str)
     parser.add_argument('--name', type=str, default="test")
+    parser.add_argument('--food-types', type=int)
     parser.add_argument('--num-samples', type=int, default=8)
     parser.add_argument('--num-agents', type=int, default=4)
+    parser.add_argument('--pop-size', type=int, default=10)
     parser.add_argument('--episode-length', type=int, default=200)
     parser.add_argument('--class-name', type=str, default="class")
     parser.add_argument('--spawn-agents', type=str, help="[center, corner, random]", default="center")
@@ -42,3 +44,6 @@ def get_args():
     parser.add_argument('--punish', action="store_true")
     parser.add_argument('--pbt', action="store_true")
     return parser.parse_args()
+
+if __name__ == "__main__":
+    args = get_args()
