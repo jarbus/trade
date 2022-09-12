@@ -80,6 +80,5 @@ class TradeCallback(DefaultCallbacks):
             for act, count in self.action_counts.items():
                 episode.custom_metrics[f"percent_{act}"] = count / total_number_of_actions
         episode.custom_metrics["rew_base_health"] = env.mc.rew_base_health
-        episode.custom_metrics["rew_shared_health"] = env.mc.rew_shared_health
         episode.custom_metrics["rew_light"] = env.mc.rew_light
         episode.custom_metrics["rew_act"] = env.mc.rew_acts

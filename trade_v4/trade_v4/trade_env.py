@@ -268,11 +268,11 @@ class Trade(MultiAgentEnv):
         ineq = 0
         if self.health_baseline:
             num_of_food_types = sum(1 for f in self.agent_food_counts[agent] if f >= 0.1)
-            base_health = [0, 0.3, 1][num_of_food_types]
+            base_health = [0, 0.1, 1][num_of_food_types]
             for a in self.agents:
                 if a != agent:
                     num_of_food_types = sum(1 for f in self.agent_food_counts[a] if f >= 0.1)
-                    other_health = [0, 0.3, 1][num_of_food_types]
+                    other_health = [0, 0.1, 1][num_of_food_types]
                     shared_health += other_health * self.share_health
                     ineq += max(other_health - base_health, 0)
 
