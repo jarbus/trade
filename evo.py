@@ -272,13 +272,32 @@ if __name__ == "__main__":
         for w in trainer.workers.remote_workers():
             w.foreach_env.remote(
                     lambda env: env.set_matchups(matchups))
+    def write_result_header(result):
+        with open("result.txt", "w") as f:
+            for stat in ["min", "max", "mean"]:
+                f.write(f"episode_reward_{stat}\t")
+            for met in sorted(result["custom_metrics"].keys()):
+                f.write(f"{met}\t")
+            f.write("\n")
 
+    def write_result_line(result):
+        with open("result.txt","a") as f:
+            for stat in ["min", "max", "mean"]:
+                f.write(str(round(result[f"episode_reward_{stat}"], 2)) + "\t")
+            for _, val in sorted(result["custom_metrics"].items()):
+                f.write(str(round(val, 2)) + "\t")
+            f.write("\n")
 
-
-    for i in range(20):
-        print("Training")
-        for j in range(10):
-            trainer.train()
+    prev_result = {'custom_metrics':{}}
+    for i in range(30):
+        result = trainer.train()
+        if result["custom_metrics"] != prev_result['custom_metrics']:
+            if not result["custom_metrics"]:
+                continue
+            if not prev_result["custom_metrics"]:
+                write_result_header(result)
+            write_result_line(result)
+            prev_result = result
         # TODO:figure out why this is not returning num_env_episodes
         print("Evolve")
         evolve(trainer)
