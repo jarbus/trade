@@ -1,6 +1,8 @@
+import os
 import re
 import numpy as np
 import ray
+from subprocess import Popen
 from statistics import mean
 from math import ceil
 from dataclasses import dataclass
@@ -21,8 +23,16 @@ from ray.rllib.evaluation.metrics import summarize_episodes, collect_episodes
 
 import random
 from DIRS import RESULTS_DIR
+CUSTOM_METRICS = []
 
 args = get_args()
+CLASS_DIR = os.path.join(RESULTS_DIR, f"{args.class_name}")
+os.path.exists(CLASS_DIR) or os.mkdir(CLASS_DIR)
+
+EXP_DIR = os.path.join(CLASS_DIR, f"{args.name}")
+os.path.exists(EXP_DIR) or os.mkdir(EXP_DIR)
+
+RESULT_FILE=os.path.join(EXP_DIR,"results.txt")
 
 pops = [[f"f{f}a{a}" for a in range(args.pop_size//args.food_types)] for f in range(args.food_types)]
 env_config = {"window": (3, 3),
@@ -103,14 +113,14 @@ def all_vs_all(trainer, workerset):
             for m in range(0, len(matchups), bin)]
     futures = []
     for i, w in enumerate(workers):
-        print(f"Running {worker_matchups[i]} on worker_{i}...")
+        #print(f"Running {worker_matchups[i]} on worker_{i}...")
         w.foreach_env_with_context.remote(
                 lambda env, ctx: env.set_matchups(worker_matchups[i]))
         for _ in worker_matchups[i]:
             futures.append(w.sample.remote())
     ray.get(futures)
     episodes, _ = collect_episodes( remote_workers=workerset.remote_workers(), timeout_seconds=99999)
-    print(f"Collected {len(episodes)} episodes.")
+    #print(f"Collected {len(episodes)} episodes.")
 
     metrics = summarize_episodes(episodes)
     return metrics
@@ -130,17 +140,17 @@ config={
         "log_level": "ERROR",
         "framework": "torch",
         "horizon": args.episode_length * args.num_agents,
-        "num_gpus": 0,
+        "num_gpus": 1,
         "evaluation_config": {
             "env_config": {"agents": [] },
             "explore": False
         },
         "evaluation_duration": 20, # make this number of envs per worker
         "evaluation_num_workers" : 4,
-        "num_workers": 1,
+        "num_workers": 3,
         "custom_eval_function": all_vs_all,
 
-        "num_cpus_for_driver": 1,
+        "num_cpus_per_worker": 3,
         "num_envs_per_worker": 20,
         "batch_mode": 'truncate_episodes',
         "lambda": 0.95,
@@ -186,7 +196,7 @@ if __name__ == "__main__":
         pol_id = config["env_config"]["latest_agent_ids"][pop]
         pol_name = f"f{pop}a{pol_id}"
 
-        print(f"Adding {pol_name}")
+        #print(f"Adding {pol_name}")
         config["multiagent"]["policies"][pol_name] = pol_spec
         trainer.add_policy(pol_name,
             PPOTorchPolicy,
@@ -196,7 +206,7 @@ if __name__ == "__main__":
         return pol_name
 
     def rm_pol(pol_name: str):
-        print(f"Removing {pol_name}")
+        #print(f"Removing {pol_name}")
         config["multiagent"]["policies"].pop(pol_name)
         trainer.remove_policy(pol_name,
                 policy_mapping_fn=POLICY_MAPPING_FN,
@@ -208,7 +218,7 @@ if __name__ == "__main__":
         return weights
 
     def cp_and_mut(src_pol: str, dst_pol: str):
-        print(f"Mutated copy: {src_pol}->{dst_pol}")
+        #print(f"Mutated copy: {src_pol}->{dst_pol}")
         trainer.set_weights({dst_pol: mutate_weights(trainer.get_weights([src_pol])[src_pol])})
 
     def sort_pops(rewards: Dict[str, int]) -> List[List[Tuple[float, str]]]:
@@ -234,7 +244,7 @@ if __name__ == "__main__":
         return new_pops_rewards
 
     def reproduction(pops_rewards: List[List[Tuple[float, str]]]):
-        print("Beginning reproduction")
+        #print("Beginning reproduction")
         new_pops = []
         for f, pop in enumerate(pops_rewards):
             pols = [pol[1] for pol in pop]
@@ -261,43 +271,83 @@ if __name__ == "__main__":
         evaluate_result = trainer.evaluate()
         eval_rewards = evaluate_result["evaluation"]["hist_stats"]
         sorted_pops = sort_pops(eval_rewards)
+        with open(os.path.join(EXP_DIR,"evo.txt"), "a") as f:
+            f.write("Generation:\n")
+            for pop in sorted_pops:
+                for rew, pol in pop:
+                    f.write(str(round(rew, 2))+"\t"+pol+"\n")
+            
         selected_pops = selection(sorted_pops)
         new_pops = reproduction(selected_pops)
         matchups = list(product(*new_pops))
         config["env_config"]["matchups"] = matchups
-        print(f"Setting new matchups: {matchups}")
+        #print(f"Setting new matchups: {matchups}")
 
         trainer.reset_config(config)
 
         for w in trainer.workers.remote_workers():
             w.foreach_env.remote(
                     lambda env: env.set_matchups(matchups))
-    def write_result_header(result):
-        with open("result.txt", "w") as f:
+    def write_result_header(filename: str):
+        if not CUSTOM_METRICS:
+            raise ValueError("CUSTOM METRICS NOT SET")
+        with open(filename, "w") as f:
             for stat in ["min", "max", "mean"]:
                 f.write(f"episode_reward_{stat}\t")
-            for met in sorted(result["custom_metrics"].keys()):
+            for met in CUSTOM_METRICS:
                 f.write(f"{met}\t")
             f.write("\n")
 
     def write_result_line(result):
-        with open("result.txt","a") as f:
+        if not CUSTOM_METRICS:
+            raise ValueError("CUSTOM METRICS NOT SET")
+        with open(RESULT_FILE,"a") as f:
             for stat in ["min", "max", "mean"]:
                 f.write(str(round(result[f"episode_reward_{stat}"], 2)) + "\t")
-            for _, val in sorted(result["custom_metrics"].items()):
-                f.write(str(round(val, 2)) + "\t")
+            for met in CUSTOM_METRICS:
+                if met in result["custom_metrics"]:
+                    f.write(str(round(result["custom_metrics"][met], 2)) + "\t")
+                else:
+                    f.write("\t")
             f.write("\n")
 
-    prev_result = {'custom_metrics':{}}
-    for i in range(30):
-        result = trainer.train()
-        if result["custom_metrics"] != prev_result['custom_metrics']:
-            if not result["custom_metrics"]:
+    def update_result_header(result):
+        """If metrics in current result file are
+        m1, m2, m3, this assumes that all new metrics
+        to be tracked are columns added to the end of
+        the result file."""
+        if not CUSTOM_METRICS:
+            return
+        # Write updated header
+        tmp_result = f"/tmp/{args.class_name}-{args.name}"
+        write_result_header(tmp_result)
+        # Copy any existing results
+        if os.path.exists(RESULT_FILE):
+            with open(tmp_result, "a") as tmp:
+                Popen(f"tail -n +2 {RESULT_FILE}".split(), stdout=tmp).wait()
+        # Replace original
+        Popen(["mv", tmp_result, RESULT_FILE]).wait()
+
+    CUSTOM_METRICS = []
+    prev_result = {'custom_metrics': {}}
+    for i in range(100):
+        for j in range(100):
+
+            result = trainer.train()
+            # trainer.train() returns a result with the same custom_metric dict
+            # if no new episodes were completed. in this case, skip logging.
+            if not result["custom_metrics"] or  result["custom_metrics"] == prev_result['custom_metrics']:
                 continue
-            if not prev_result["custom_metrics"]:
-                write_result_header(result)
+            # Add unseen metric to CUSTOM_METRICS and update result file
+            if not set(result["custom_metrics"].keys()).issubset(set(CUSTOM_METRICS)):
+                CUSTOM_METRICS.extend([m for m in result["custom_metrics"].keys() if m not in CUSTOM_METRICS])
+                update_result_header(result)
+
             write_result_line(result)
             prev_result = result
+
         # TODO:figure out why this is not returning num_env_episodes
-        print("Evolve")
+        #print("Evolve")
         evolve(trainer)
+        if i % 10 == 0:
+            trainer.save_checkpoint(EXP_DIR)
