@@ -1,7 +1,10 @@
 import os
+import sys
 import re
 import numpy as np
 import ray
+import glob
+import pickle
 from subprocess import Popen
 from statistics import mean
 from math import ceil
@@ -205,6 +208,21 @@ if __name__ == "__main__":
             config=config)
         return pol_name
 
+
+    def add_pol_by_name(pop: int, name: str):
+        pop, a = re.match(r"f(\d+)a(\d+)", name).groups()
+        config["env_config"]["latest_agent_ids"][int(pop)] = max(
+            config["env_config"]["latest_agent_ids"][int(pop)], int(a))
+
+        #print(f"Adding {pol_name}")
+        config["multiagent"]["policies"][name] = pol_spec
+        trainer.add_policy(name,
+            PPOTorchPolicy,
+            policy_mapping_fn=policy_mapping_fn,
+            policies_to_train=list(config["multiagent"]["policies"].keys()),
+            config=config)
+        return name
+
     def rm_pol(pol_name: str):
         #print(f"Removing {pol_name}")
         config["multiagent"]["policies"].pop(pol_name)
@@ -214,7 +232,7 @@ if __name__ == "__main__":
 
     def mutate_weights(weights: dict):
         for d in weights.keys():
-            weights[d] = weights[d] + np.random.normal(size=weights[d].shape)
+            weights[d] = weights[d] + (0.1 * np.random.normal(size=weights[d].shape))
         return weights
 
     def cp_and_mut(src_pol: str, dst_pol: str):
@@ -225,8 +243,8 @@ if __name__ == "__main__":
         food_pols = [[] for _ in range(args.food_types)]
         for pol in rewards.keys():
             try:
-                f, a = re.match(r"policy_f(\d+)a(\d+)_reward", pol).groups()
-                food_pols[int(f)].append((mean(rewards[pol]), f"f{f}a{a}"))
+                f, a = re.match(r"f(\d+)a(\d+)", pol).groups()
+                food_pols[int(f)].append((rewards[pol], pol))
             except:
                 continue
         for f in range(len(food_pols)):
@@ -269,7 +287,7 @@ if __name__ == "__main__":
 
     def evolve(trainer):
         evaluate_result = trainer.evaluate()
-        eval_rewards = evaluate_result["evaluation"]["hist_stats"]
+        eval_rewards = evaluate_result["evaluation"]["policy_reward_mean"]
         sorted_pops = sort_pops(eval_rewards)
         with open(os.path.join(EXP_DIR,"evo.txt"), "a") as f:
             f.write("Generation:\n")
@@ -288,6 +306,8 @@ if __name__ == "__main__":
         for w in trainer.workers.remote_workers():
             w.foreach_env.remote(
                     lambda env: env.set_matchups(matchups))
+        return new_pops
+
     def write_result_header(filename: str):
         if not CUSTOM_METRICS:
             raise ValueError("CUSTOM METRICS NOT SET")
@@ -328,10 +348,40 @@ if __name__ == "__main__":
         # Replace original
         Popen(["mv", tmp_result, RESULT_FILE]).wait()
 
+    def save(trainer, path):
+        trainer.save_checkpoint(path)
+        with open(os.path.join(path, "policies.p"), "wb") as f:
+            pickle.dump(list(trainer.config["multiagent"]["policies"].keys()), f)
+
+    def load(trainer, path):
+        global policies
+        check = 0
+        newest_checkpoint = ""
+        for f in glob.glob(f"{os.path.join(path, '*')}"):
+            m = re.match(".*checkpoint-(\d+)", f)
+            if m:
+                new_check = int(m.groups()[0])
+                if new_check > check:
+                    check = new_check
+                    newest_checkpoint = f
+        check_path = os.path.join(path, newest_checkpoint)
+        for pol in policies.copy().keys():
+            rm_pol(pol)
+        with open(os.path.join(path,"policies.p"), "rb") as f:
+            saved_pols = pickle.load(f)
+            for pol in saved_pols:
+                add_pol_by_name(trainer, pol)
+
+        if newest_checkpoint:
+            print(f"Restoring from {check_path}")
+            trainer.load_checkpoint(check_path)
+
     CUSTOM_METRICS = []
     prev_result = {'custom_metrics': {}}
+    load(trainer, EXP_DIR)
+    sys.exit(0)
     for i in range(100):
-        for j in range(100):
+        for j in range(2000):
 
             result = trainer.train()
             # trainer.train() returns a result with the same custom_metric dict
@@ -348,6 +398,5 @@ if __name__ == "__main__":
 
         # TODO:figure out why this is not returning num_env_episodes
         #print("Evolve")
-        evolve(trainer)
-        if i % 10 == 0:
-            trainer.save_checkpoint(EXP_DIR)
+        new_pops = evolve(trainer)
+        trainer.save_checkpoint(EXP_DIR)
