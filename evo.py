@@ -206,6 +206,7 @@ if __name__ == "__main__":
             policy_mapping_fn=policy_mapping_fn,
             policies_to_train=list(config["multiagent"]["policies"].keys()),
             config=config)
+        trainer.reset_config(config)
         return pol_name
 
 
@@ -221,6 +222,8 @@ if __name__ == "__main__":
             policy_mapping_fn=policy_mapping_fn,
             policies_to_train=list(config["multiagent"]["policies"].keys()),
             config=config)
+
+        trainer.reset_config(config)
         return name
 
     def rm_pol(pol_name: str):
@@ -229,6 +232,7 @@ if __name__ == "__main__":
         trainer.remove_policy(pol_name,
                 policy_mapping_fn=POLICY_MAPPING_FN,
                 policies_to_train=list(config["multiagent"]["policies"].keys()))
+        trainer.reset_config(config)
 
     def mutate_weights(weights: dict):
         for d in weights.keys():
@@ -244,7 +248,7 @@ if __name__ == "__main__":
         for pol in rewards.keys():
             try:
                 f, a = re.match(r"f(\d+)a(\d+)", pol).groups()
-                food_pols[int(f)].append((rewards[pol], pol))
+                food_pols[int(f)].append((rewards[pol], f"f{f}a{a}"))
             except:
                 continue
         for f in range(len(food_pols)):
@@ -331,7 +335,7 @@ if __name__ == "__main__":
                     f.write("\t")
             f.write("\n")
 
-    def update_result_header(result):
+    def update_result_header():
         """If metrics in current result file are
         m1, m2, m3, this assumes that all new metrics
         to be tracked are columns added to the end of
@@ -355,10 +359,10 @@ if __name__ == "__main__":
 
     def load(trainer, path):
         global policies
-        check = 0
+        check = -1
         newest_checkpoint = ""
         for f in glob.glob(f"{os.path.join(path, '*')}"):
-            m = re.match(".*checkpoint-(\d+)", f)
+            m = re.match(r".*checkpoint-(\d+)", f)
             if m:
                 new_check = int(m.groups()[0])
                 if new_check > check:
@@ -391,7 +395,7 @@ if __name__ == "__main__":
             # Add unseen metric to CUSTOM_METRICS and update result file
             if not set(result["custom_metrics"].keys()).issubset(set(CUSTOM_METRICS)):
                 CUSTOM_METRICS.extend([m for m in result["custom_metrics"].keys() if m not in CUSTOM_METRICS])
-                update_result_header(result)
+                update_result_header()
 
             write_result_line(result)
             prev_result = result
