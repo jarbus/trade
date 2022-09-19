@@ -43,8 +43,8 @@ all_exchange_messages = []
 player_colors = ["olivedrab", "darkcyan", "mediumslateblue", "purple", "brown", "navajowhite", "plum", "gray"]
 food_colors = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
 offv = 0.015
-player_offsets = (0, offv), (offv, 0), (0, -offv), (-offv, 0),\
-        (offv, offv), (offv, -offv), (-offv, offv), (-offv, -offv)
+player_offsets = (0, offv), (offv, 0), (0, 2*offv), (2*offv, 0),\
+        (offv, offv), (offv, 2*offv), (2*offv, offv), (2*offv, 2*offv)
 grid_offset = (0.01, 0.01)
 def add_tuple(a, b):
     return tuple(i + j for i, j in zip(a, b))
