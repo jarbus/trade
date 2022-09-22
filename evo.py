@@ -5,6 +5,7 @@ import numpy as np
 import ray
 import glob
 import pickle
+import copy
 from subprocess import Popen
 from statistics import mean
 from math import ceil
@@ -206,7 +207,6 @@ if __name__ == "__main__":
             policy_mapping_fn=policy_mapping_fn,
             policies_to_train=list(config["multiagent"]["policies"].keys()),
             config=config)
-        trainer.reset_config(config)
         return pol_name
 
 
@@ -222,8 +222,6 @@ if __name__ == "__main__":
             policy_mapping_fn=policy_mapping_fn,
             policies_to_train=list(config["multiagent"]["policies"].keys()),
             config=config)
-
-        trainer.reset_config(config)
         return name
 
     def rm_pol(pol_name: str):
@@ -232,7 +230,6 @@ if __name__ == "__main__":
         trainer.remove_policy(pol_name,
                 policy_mapping_fn=POLICY_MAPPING_FN,
                 policies_to_train=list(config["multiagent"]["policies"].keys()))
-        trainer.reset_config(config)
 
     def mutate_weights(weights: dict):
         for d in weights.keys():
@@ -241,14 +238,14 @@ if __name__ == "__main__":
 
     def cp_and_mut(src_pol: str, dst_pol: str):
         #print(f"Mutated copy: {src_pol}->{dst_pol}")
-        trainer.set_weights({dst_pol: mutate_weights(trainer.get_weights([src_pol])[src_pol])})
+        trainer.set_weights({dst_pol: mutate_weights( copy.deepcopy( trainer.get_weights([src_pol]))[src_pol])})
 
     def sort_pops(rewards: Dict[str, int]) -> List[List[Tuple[float, str]]]:
         food_pols = [[] for _ in range(args.food_types)]
         for pol in rewards.keys():
             try:
                 f, a = re.match(r"f(\d+)a(\d+)", pol).groups()
-                food_pols[int(f)].append((rewards[pol], f"f{f}a{a}"))
+                food_pols[int(f)].append((rewards[pol], pol))
             except:
                 continue
         for f in range(len(food_pols)):
@@ -335,7 +332,7 @@ if __name__ == "__main__":
                     f.write("\t")
             f.write("\n")
 
-    def update_result_header():
+    def update_result_header(result):
         """If metrics in current result file are
         m1, m2, m3, this assumes that all new metrics
         to be tracked are columns added to the end of
@@ -358,49 +355,73 @@ if __name__ == "__main__":
             pickle.dump(list(trainer.config["multiagent"]["policies"].keys()), f)
 
     def load(trainer, path):
-        global policies
+        print("Loading checkpoint from", path)
+        global policies, CUSTOM_METRICS, RESULT_FILE
         check = -1
         newest_checkpoint = ""
         for f in glob.glob(f"{os.path.join(path, '*')}"):
-            m = re.match(r".*checkpoint-(\d+)", f)
+            m = re.match(".*checkpoint-(\d+)", f)
             if m:
                 new_check = int(m.groups()[0])
                 if new_check > check:
                     check = new_check
                     newest_checkpoint = f
         check_path = os.path.join(path, newest_checkpoint)
-        for pol in policies.copy().keys():
-            rm_pol(pol)
-        with open(os.path.join(path,"policies.p"), "rb") as f:
-            saved_pols = pickle.load(f)
-            for pol in saved_pols:
-                add_pol_by_name(trainer, pol)
 
         if newest_checkpoint:
-            print(f"Restoring from {check_path}")
-            trainer.load_checkpoint(check_path)
+            with open(RESULT_FILE, "rb") as f:
+                CUSTOM_METRICS = next(f).strip().split()
 
+            print(f"Restoring from {check_path}")
+            for pol in policies.copy().keys():
+                print(f"Removing {pol}")
+                rm_pol(pol)
+            with open(os.path.join(path,"policies.p"), "rb") as f:
+                saved_pols = pickle.load(f)
+                assert len(saved_pols) > 1
+                for pol in saved_pols:
+                    print(f"Adding {pol}")
+                    add_pol_by_name(trainer, pol)
+
+            trainer.reset_config(config)
+            trainer.load_checkpoint(check_path)
+            loaded_pops = policies_to_pops(saved_pols)
+            assert all(len(pop) > 0 for pop in loaded_pops)
+            matchups = list(product(*loaded_pops))
+            assert len(matchups) > 0
+            print("Setting matchups", matchups)
+
+            for w in trainer.workers.remote_workers():
+                w.foreach_env.remote(
+                    lambda env: env.set_matchups(matchups))
+
+    print("BEGINNING LOOP")
     CUSTOM_METRICS = []
     prev_result = {'custom_metrics': {}}
     load(trainer, EXP_DIR)
-    sys.exit(0)
     for i in range(100):
-        for j in range(2000):
+        for j in range(1000):
 
+            print("Training")
             result = trainer.train()
+            print("Trained")
             # trainer.train() returns a result with the same custom_metric dict
             # if no new episodes were completed. in this case, skip logging.
             if not result["custom_metrics"] or  result["custom_metrics"] == prev_result['custom_metrics']:
+                print("Skipping no new results")
                 continue
             # Add unseen metric to CUSTOM_METRICS and update result file
             if not set(result["custom_metrics"].keys()).issubset(set(CUSTOM_METRICS)):
                 CUSTOM_METRICS.extend([m for m in result["custom_metrics"].keys() if m not in CUSTOM_METRICS])
-                update_result_header()
+                print("Updating result header")
+                update_result_header(result)
 
+            print("Writing results")
             write_result_line(result)
             prev_result = result
 
         # TODO:figure out why this is not returning num_env_episodes
         #print("Evolve")
-        new_pops = evolve(trainer)
-        trainer.save_checkpoint(EXP_DIR)
+        print("Evolving and saving")
+        evolve(trainer)
+        save(trainer, EXP_DIR)
