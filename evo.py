@@ -397,7 +397,6 @@ if __name__ == "__main__":
                     lambda env: env.set_matchups(matchups))
 
     print("BEGINNING LOOP")
-    CUSTOM_METRICS = []
     prev_result = {'custom_metrics': {}}
     load(trainer, EXP_DIR)
     for i in range(100):
@@ -424,5 +423,6 @@ if __name__ == "__main__":
         # TODO:figure out why this is not returning num_env_episodes
         #print("Evolve")
         print("Evolving and saving")
-        evolve(trainer)
+        if not args.noevo:
+            evolve(trainer)
         save(trainer, EXP_DIR)

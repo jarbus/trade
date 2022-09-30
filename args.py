@@ -38,6 +38,7 @@ def get_args():
     parser.add_argument('--pickup-coeff', type=float, default=1.0)
     parser.add_argument('--survival-bonus', type=float, default=0.0)
     parser.add_argument('--health-baseline', action="store_true")
+    parser.add_argument('--noevo', action="store_true")
     parser.add_argument('--num-policies', type=int, default=1, help="[1,2,4]")
     parser.add_argument('--respawn', action="store_true")
     parser.add_argument('--resume', action="store_true")
