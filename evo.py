@@ -301,8 +301,9 @@ if __name__ == "__main__":
         matchups = list(product(*new_pops))
         config["env_config"]["matchups"] = matchups
         #print(f"Setting new matchups: {matchups}")
-
+        weights = trainer.get_weights()
         trainer.reset_config(config)
+        trainer.set_weights(weights)
 
         for w in trainer.workers.remote_workers():
             w.foreach_env.remote(
