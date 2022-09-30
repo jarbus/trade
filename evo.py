@@ -370,7 +370,7 @@ if __name__ == "__main__":
         check_path = os.path.join(path, newest_checkpoint)
 
         if newest_checkpoint:
-            with open(RESULT_FILE, "rb") as f:
+            with open(RESULT_FILE) as f:
                 CUSTOM_METRICS = next(f).strip().split()
 
             print(f"Restoring from {check_path}")
