@@ -13,6 +13,7 @@ def get_args():
     parser.add_argument('--pop-size', type=int, default=10)
     parser.add_argument('--episode-length', type=int, default=200)
     parser.add_argument('--class-name', type=str, default="class")
+    parser.add_argument('--model', type=str, help="[small, medium, large]", default="medium")
     parser.add_argument('--spawn-agents', type=str, help="[center, corner, random]", default="center")
     parser.add_argument('--spawn-food', type=str, help="[corner, doublecorner]", default="corner")
     parser.add_argument('--fires', nargs='+', type=int, help="x,y of fires")
