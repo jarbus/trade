@@ -1,0 +1,19 @@
+#!/bin/bash
+if [[ $@ == *"--resume"* ]]; then
+    echo "Resuming..."
+    resume="--resume"
+else
+    resume=""
+fi
+
+dir="arg_files"
+arg_files=$(ls $dir/*arg | fzf --multi)
+echo $arg_files
+pylint --disable C,W,R evo.py
+for arg_file in $arg_files; do
+    if [[ -f "$arg_file" ]]; then
+        name=$(basename "$arg_file" .arg)
+        args=$(cat "$arg_file")
+        python slurm-launch.py --exp-name "$name" --command "python evo.py --name $name $args $resume" --load-env "trade" --partition "guest-gpu"
+    fi
+done

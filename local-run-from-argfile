@@ -1,0 +1,8 @@
+#!/bin/bash
+arg_file="$1"
+if [[ -f "$arg_file" ]]; then
+    name=$(basename "$arg_file" .arg)
+    args=$(cat "$arg_file")
+    pylint --disable C,W,R evo.py
+    python evo.py --name $name $args
+fi

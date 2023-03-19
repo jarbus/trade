@@ -45,6 +45,8 @@ class TradeCallback(DefaultCallbacks):
             episode.custom_metrics[f"exchange_{food}"] = count
         #for symbol, count in enumerate(self.comm_history):
         #    episode.custom_metrics[f"comm_{symbol}"] = count
+        total_picked = 0
+        total_placed = 0
         for agent in env.agents:
             #episode.custom_metrics[f"{agent}_punishes"] = self.punish_counts[agent]
             #episode.custom_metrics[f"{agent}_lifetime"] = env.mc.lifetimes[agent]
@@ -73,11 +75,15 @@ class TradeCallback(DefaultCallbacks):
             for food in range(env.food_types):
                 episode.custom_metrics[f"{agent}_PICK_{food}"] = env.mc.picked_counts[agent][food]
                 episode.custom_metrics[f"{agent}_PLACE_{food}"] = env.mc.placed_counts[agent][food]
-
+                total_picked += env.mc.picked_counts[agent][food]  
+                total_placed += env.mc.placed_counts[agent][food] 
+        episode.custom_metrics["total_picked"] = total_picked
+        episode.custom_metrics["total_placed"] = total_placed
         episode.custom_metrics["avg_avg_dist"] = sum(self.agent_dists) / len(self.agent_dists)
         total_number_of_actions = sum(self.action_counts.values())
         if total_number_of_actions > 0:
             for act, count in self.action_counts.items():
+                assert count / total_number_of_actions >= 0
                 episode.custom_metrics[f"percent_{act}"] = count / total_number_of_actions
         episode.custom_metrics["rew_base_health"] = env.mc.rew_base_health
         episode.custom_metrics["rew_light"] = env.mc.rew_light

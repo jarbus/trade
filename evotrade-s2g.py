@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import re
 import gif
 import argparse
@@ -12,7 +13,7 @@ parser = argparse.ArgumentParser(description="Convert serve file to gif")
 parser.add_argument("file", type=str)
 args = parser.parse_args()
 
-player_expr = r"(.*): \((\d*), (\d*)\) \[(.*), (.*)\] (.*)$"
+player_expr = r"(.*): \((\d*), (\d*)\) \[[(\s*),\s]*(.*)\] (.*)$"
 exchange_expr = r"Exchange: (.*) gave (\S*) of food (\d) to (.*)"
 total_exchange_expr = r"Total exchanged.*: \[(.*), (.*)\]"
 food_expr = r"food(\d):"
@@ -40,10 +41,12 @@ class Step:
 
 
 all_exchange_messages = []
-player_colors = ["olivedrab", "darkcyan", "mediumslateblue", "purple", "brown", "navajowhite", "plum", "gray"]
+player_colors = ["olivedrab", "darkcyan", "mediumslateblue", "purple", "brown", "navajowhite", "plum", "gray", "blue", "red", "orange"]
 food_colors = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
 offv = 0.015
 player_offsets = (0, offv), (offv, 0), (0, 2*offv), (2*offv, 0),\
+        (offv, offv), (offv, 2*offv), (2*offv, offv), (2*offv, 2*offv),\
+        (0, offv), (offv, 0), (0, 2*offv), (2*offv, 0),\
         (offv, offv), (offv, 2*offv), (2*offv, offv), (2*offv, 2*offv)
 grid_offset = (0.01, 0.01)
 def add_tuple(a, b):
@@ -80,10 +83,6 @@ def plot_step(step: Step):
             rect = plt.Rectangle(l_pos, 1/scale, 1/scale, color=(yellow, yellow, not_yellow), fill=True)
             grid.add_patch(rect)
 
-
-
-
-
     fig.text(vs + 0.05, 1-0.05, "Player           reds      greens")
     fig.text(vs + 0.05, 1-0.07, "-----------------------------------------")
     fig.text(vs + 0.02, hs+0.03, f"Total Exchanged:", fontsize=8, wrap=True)
@@ -114,6 +113,7 @@ def plot_step(step: Step):
 
         p_pos = tuple(p / scale for p in reversed(player.pos))
 
+        p_pos = add_tuple(p_pos, (0, 0))
         p_pos = add_tuple(p_pos, (0.15/scale, 0.15/scale))
         p_pos = add_tuple(p_pos, player_offsets[i])
         radius = 0.5/scale
@@ -148,7 +148,8 @@ for i in range(num_steps):
     grid = step.food_grid
     for line in lines[step_slices[i]]:
         if m := re.match(player_expr, line):
-            player, x, y, *ft, done = m.groups()
+            player, x, y, ft, done = m.groups()
+            ft = ft.split(", ")
             p = Player(player, (int(x), int(y)), tuple(float(f) for f in ft), done == "True")
             step.players.append(p)
 
@@ -179,40 +180,3 @@ for i in range(num_steps):
 
 # Specify the duration between frames (milliseconds) and save to file:
 gif.save(frames, f'{args.file}.gif', duration=100)
-
-
-
-
-
-
-#fig = plt.figure()
-##axes.append(fig.add_axes([x, y, w, h]))
-#vs = 0.6
-#hs = 0.6
-#axes = [
-#    fig.add_axes([0, 0, vs, 1.0]),
-#    fig.add_axes([vs, hs, 1-vs, 1-hs]),
-#    fig.add_axes([vs, 0, 1-vs, hs]),
-#]
-#fig.text(0, 0, "hi", fontsize=48, wrap=True)
-#for ax in axes:
-#    ax.scatter((1, 2), (3, 4))
-#plt.show()
-
-#import numpy as np
-#import matplotlib.pyplot as plt
-#
-#N = 8
-#t = np.linspace(0,2*np.pi, N, endpoint=False)
-#r = 0.37
-#h = 0.9 - 2*r
-#w = h
-#X,Y = r*np.cos(t)-w/2.+ 0.5, r*np.sin(t)-h/2.+ 0.5
-#
-#fig = plt.figure()
-#axes = []
-#for x,y in zip(X,Y):
-#    print(x, y, w, h)
-#    axes.append(fig.add_axes([x, y, w, h]))
-#
-#plt.show()

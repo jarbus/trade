@@ -10,6 +10,7 @@ def get_args():
     parser.add_argument('--food-types', type=int)
     parser.add_argument('--num-samples', type=int, default=8)
     parser.add_argument('--num-agents', type=int, default=4)
+    parser.add_argument('--learning-rate', type=float, default=1e-04)
     parser.add_argument('--pop-size', type=int, default=10)
     parser.add_argument('--episode-length', type=int, default=200)
     parser.add_argument('--class-name', type=str, default="class")

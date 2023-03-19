@@ -1,13 +1,15 @@
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
-from gym.spaces import Discrete, Box
+import os
+import sys
 import numpy as np
 from math import floor
-from .utils import add_tup, directions, valid_pos, inv_dist, punish_region, matchup_shuffler
-from .light import Light
-from .spawners import FireCornerSpawner, FoodSpawner, DiscreteFoodSpawner
-import sys
+from itertools import cycle
 from collections import defaultdict
 from typing import List, Tuple, Dict
+from gym.spaces import Discrete, Box
+from ray.rllib.env.multi_agent_env import MultiAgentEnv
+from .light import Light
+from .utils import add_tup, directions, valid_pos, inv_dist, punish_region, matchup_shuffler
+from .spawners import FireCornerSpawner, FoodSpawner, DiscreteFoodSpawner
 
 class TradeMetricCollector():
     def __init__(self, env):
@@ -65,7 +67,6 @@ NUM_ITERS = 100
 ndir = len(directions)
 
 class Trade(MultiAgentEnv):
-    action_space = Discrete(2)
 
     def __init__(self, env_config):
         #print(f"Creating Trade environment {env_config}")
@@ -85,6 +86,7 @@ class Trade(MultiAgentEnv):
         self.foods                 = env_config.get("foods")
         self.night_time_death_prob = env_config.get("night_time_death_prob", 0.1)
         self.punish                = env_config.get("punish", False)
+        self.render_ep             = env_config.get("render", False)
         self.punish_coeff          = env_config.get("punish_coeff", 3)
         self.survival_bonus        = env_config.get("survival_bonus", 0.0)
         self.respawn               = env_config.get("respawn", False)
@@ -101,6 +103,7 @@ class Trade(MultiAgentEnv):
         self.light                 = Light(self.grid_size, self.fires, 2/self.day_steps)
         super().__init__()
 
+        self.render_path = None
 
 
         # (self + policies) * (food frames and pos frame)
@@ -134,7 +137,18 @@ class Trade(MultiAgentEnv):
     def set_matchups(self, matchups: List[Tuple[str, str]]):
         self.matchups = matchups
         self.matchup_iterator = matchup_shuffler(self.matchups)
-        self.reset()
+        #self.reset()
+
+    def set_render_path(self, path:str):
+        self.render_path = path
+        # deterministic order for rendering matchups
+        # ray needs to get last obs, which means reset will be called
+        # on the last step. Therefore, next() needs to return something
+        # at the end, so we make matchups cycle.
+        self.matchup_iterator = cycle(self.matchups)
+        #print(f"Render path set to {self.render_path}")
+        #print(f"Matchups set to {self.matchups} in that order")
+        #self.reset()
 
     def seed(self, seed=None):
         if seed:
@@ -155,13 +169,17 @@ class Trade(MultiAgentEnv):
 
     def reset(self):
 
-
         if self.matchups == [] or self.matchups == [()]:
             return {}
 
+
         self.light.reset()
         self.agents = list(next(self.matchup_iterator)) # self.possible_agents[:]
-        print(f"Running env with agents {self.agents}")
+
+
+        if not self.agents:
+            raise ValueError(f"Agents not set, matchup iterator returned False, matchups={self.matchups}")
+        #print(f"Running env with agents {self.agents}")
         # print(f"resetting env with {self.agents}")
         self.action_rewards = {a: 0 for a in self.agents}
         self.dones = {agent: False for agent in self.agents}
@@ -182,6 +200,8 @@ class Trade(MultiAgentEnv):
         return {self.agents[0]: self.compute_observation(self.agents[0])}
 
     def render(self, mode="human", out=sys.stdout):
+
+        out.write(f"--------STEP-{self.steps}--------\n")
         for agent in self.agents:
             out.write(f"{agent}: {self.agent_positions[agent]} {[round(fc, 2) for fc in self.agent_food_counts[agent]]} {self.compute_done(agent)}\n")
         for food in range(self.food_types):
@@ -240,7 +260,7 @@ class Trade(MultiAgentEnv):
         xpos_frame = np.repeat(np.arange(gy).reshape(1, gy), gx, axis=0) / gx
         ypos_frame = np.repeat(np.arange(gx).reshape(gx, 1), gy, axis=1) / gy
 
-        frames = np.stack([*food_frames, *agent_and_food_frames, xpos_frame, ypos_frame, *light_frames, *pun_frames, *comm_frames], axis=2)
+        frames = np.stack([*food_frames, *agent_and_food_frames, xpos_frame, ypos_frame, *light_frames], axis=2)
         padded_frames = np.full((*self.padded_grid_size, frames.shape[2]), -1, dtype=np.float32)
         padded_frames[wx:(gx+wx), wy:(gy+wy), :] = frames
         obs = padded_frames[minx:maxx, miny:maxy, :] / SCALE_DOWN
@@ -291,6 +311,9 @@ class Trade(MultiAgentEnv):
 
         # Remember to update this function whenever you add a new reward
         self.mc.collect_rew(self, base_health, shared_health, nn_rew, twonn_rew, other_survival_bonus, pun_rew, mov_rew, light_rew, act_rew, ineq_rew)
+        assert light_rew <= 0
+        assert base_health >= 0
+        assert act_rew >= 0
 
         rew  = base_health + light_rew + act_rew
         return rew
@@ -318,11 +341,11 @@ class Trade(MultiAgentEnv):
         #        self.dones[agent] = True
 
     def step(self, actions):
+
         # placed goods will not be available until next turn
         for agent in actions.keys():
             if agent not in self.agents:
-                breakpoint()
-                print(f"ERROR: received act for {agent} which is not in {self.agents}")
+                raise ValueError(f"Received action for {agent} which is not in {self.agents}")
         gx, gy = self.grid_size
         for agent, action in actions.items():
             self.action_rewards[agent] = 0
@@ -368,6 +391,10 @@ class Trade(MultiAgentEnv):
 
             if agent == self.agents[-1]:
                 self.steps += 1
+                if self.render_path:
+                    path = self.render_path + "-".join(self.agents)+".out"
+                    with open(path, "a") as f:
+                        self.render(out=f)
                 self.light.step_light()
                 # Once agents complete all actions, add placed food to table
                 if self.respawn and self.light.dawn():
