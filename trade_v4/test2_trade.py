@@ -39,6 +39,20 @@ default_config = {
 
 class TestTrade(unittest.TestCase):
 
+    def test_deterministic_spawn(self):
+        config = default_config.copy()
+        config["grid"] = (11, 11)
+        env = Trade(config)
+        env.reset()
+        # Check that the agents are spawned in the same place after reset
+        agent_pos = env.agent_positions.copy()
+        env.reset()
+        self.assertEqual(agent_pos, env.agent_positions)
+        env = Trade(config)
+        env.reset()
+        self.assertEqual(agent_pos, env.agent_positions)
+
+
     def test_exchange(self):
         config = default_config.copy()
         config["grid"] = (11, 11)
