@@ -194,7 +194,6 @@ class DiscreteFoodSpawner(BaseSpawnGenerator):
         self.gx, self.gy = grid_size
         self.food_centers = food_centers
         self.radius = 2
-        # Precomputing this
 
     def gen_poses(self):
         poses = []
