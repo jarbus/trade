@@ -9,7 +9,7 @@ from gym.spaces import Discrete, Box
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from .light import Light
 from .utils import add_tup, directions, valid_pos, inv_dist, punish_region, matchup_shuffler
-from .spawners import FireCornerSpawner, FoodSpawner, DiscreteFoodSpawner
+from .spawners import FireCornerSpawner, FoodSpawner, DiscreteFoodSpawner, AgentSpawner
 
 class TradeMetricCollector():
     def __init__(self, env):
@@ -121,12 +121,12 @@ class Trade(MultiAgentEnv):
         self.num_actions = len(self.MOVES)
         self.communications = {}
 
-        self.agent_spawner = FireCornerSpawner(self.grid_size, self.fires)
-
         # Get rid of food type indicator for the spawner
         food_centers = [(fc[1], fc[2]) for fc in self.foods]
         self.food_spawner = FoodSpawner(self.grid_size, food_centers) 
         self.food_spawner = DiscreteFoodSpawner(self.grid_size, food_centers) 
+        # Note: ordering of food centers matters
+        self.agent_spawner = AgentSpawner(self.grid_size, food_centers)
 
         self.action_space = Discrete(self.num_actions)
         self.obs_size = (*add_tup(add_tup(self.window_size, self.window_size), (1, 1)), self.channels)

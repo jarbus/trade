@@ -52,6 +52,15 @@ class TestTrade(unittest.TestCase):
         env.reset()
         self.assertEqual(agent_pos, env.agent_positions)
 
+    def test_agent_spawner(self):
+        config = default_config.copy()
+        config["grid"] = (11, 11)
+        env = Trade(config)
+        for _ in range(2):
+            env.reset()
+            centers = [(fc[1], fc[2]) for fc in env.foods]
+            for agent, center in zip(env.agents, centers):
+                self.assertEqual(env.agent_positions[agent], center)
 
     def test_exchange(self):
         config = default_config.copy()

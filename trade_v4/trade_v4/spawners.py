@@ -147,6 +147,17 @@ class FilledCornerSpawner(BaseSpawnGenerator):
     def gen_poses(self):
         return [self.sample_corner_point(corner) for corner in self.corners]
 
+class AgentSpawner(BaseSpawnGenerator):
+    """Returns the first n_agents food pile centers"""
+    def __init__(self, grid_size: tuple, food_centers: List[Tuple]):
+        self.centers = food_centers
+    def gen_poses(self, n=4):
+        # just return the first centers I think?
+        return self.centers[:n]
+
+
+        
+
 class FoodSpawner(BaseSpawnGenerator):
     def __init__(self, grid_size: tuple, food_centers: List[Tuple]):
         self.gx, self.gy = grid_size
