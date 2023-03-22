@@ -64,6 +64,7 @@ def plot_step(step: Step):
     hs = 0.6
     #axes.append(fig.add_axes([x, y, w, h]))
     grid = fig.add_axes([0.05, 0.15, vs - 0.1, 0.7])
+    grid.axis('off')
     #grid.set_facecolor(f'{(float(step.light_level) + 1) / 2}')
     player_info = fig.add_axes([vs, hs, 1-vs, 1-hs])
     exchange_info = fig.add_axes([vs, 0, 1-vs, hs])
