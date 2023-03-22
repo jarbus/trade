@@ -191,7 +191,7 @@ class Trade(MultiAgentEnv):
         self.punish_frames = np.zeros((len(self.agents), *self.grid_size))
         self.generate_food()
         #self.agent_spawner.reset()
-        spawn_spots = self.agent_spawner.gen_poses()
+        spawn_spots = self.agent_spawner.gen_poses(n=len(self.agents))
         self.agent_positions = {agent: spawn_spot for agent, spawn_spot in zip(self.agents, spawn_spots)}
         self.steps = 0
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
