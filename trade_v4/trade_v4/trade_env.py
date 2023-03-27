@@ -197,6 +197,8 @@ class Trade(MultiAgentEnv):
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
         self.agent_food_counts = {agent: [self.food_agent_start for f in range(self.food_types)] for agent in self.agents}
         self.mc = TradeMetricCollector(self)
+        # keep old copy of player exchanges
+        self.player_exchanges = self.mc.player_exchanges.copy()  
         return {self.agents[0]: self.compute_observation(self.agents[0])}
 
     def render(self, mode="human", out=sys.stdout):
@@ -208,14 +210,20 @@ class Trade(MultiAgentEnv):
             out.write(f"food{food}:\n")
             for row in self.table[:,:,food].sum(axis=2).round(2):
                 out.write(str(list(row)).replace(",","")+"\n")
-        out.write(f"Total exchanged so far: {self.mc.num_exchanges}\n")
         if self.day_night_cycle:
             out.write(f"Light:\n")
             for row in self.light.frame.round(2):
                 out.write(str(list(row)).replace(",","")+"\n")
+        for (agent1, agent2, food_type), count in self.player_exchanges.items():
+            new_count = self.mc.player_exchanges[(agent1, agent2, food_type)]
+            if new_count != count:
+                assert new_count > count
+                out.write(f"Exchange: {agent1} gave {new_count-count} of food {food_type} to {agent2}\n")
+        out.write(f"Total exchanged so far: {self.mc.num_exchanges}\n")
         for agent, comm in self.communications.items():
             if comm and max(comm) >= 1:
                 out.write(f"{agent} said {comm.index(1)}\n")
+        self.player_exchanges = self.mc.player_exchanges.copy()
 
     def compute_observation(self, agent):
         ax, ay = self.agent_positions[agent]
