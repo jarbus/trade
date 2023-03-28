@@ -225,6 +225,36 @@ class Trade(MultiAgentEnv):
                 out.write(f"{agent} said {comm.index(1)}\n")
         self.player_exchanges = self.mc.player_exchanges.copy()
 
+    def render_interactive(self, out=sys.stdout):
+        """displays lossy text view that's easier to interact with"""
+        grid = np.full((self.grid_size[0], self.grid_size[1]), ".", dtype='<U7')
+        for i, agent in enumerate(self.agents):
+            ax, ay = self.agent_positions[agent]
+            if grid[ax, ay] == ".":
+                grid[ax, ay] = f"{i}"
+            else:
+                grid[ax, ay] = grid[ax, ay] + f"{i}"
+
+        for r in range(self.grid_size[0]):
+            for c in range(self.grid_size[1]):
+                for f in range(self.food_types):
+                    if np.sum(self.table[r, c, f, :]) <= 0:
+                        continue
+                    foodtype = ["f", "g"][f]
+                    if grid[r, c] == ".":
+                        grid[r, c] = foodtype
+                    else:
+                        grid[r, c] = grid[r, c] + foodtype
+        out.write(f"--------STEP-{self.steps}--------\n")
+        for i, move in enumerate(self.MOVES):
+            out.write(f"{i}: {move} ")
+        out.write(f"\n")
+        for agent in self.agents:
+            out.write(f"{agent}: {self.agent_positions[agent]} {[round(fc, 2) for fc in self.agent_food_counts[agent]]} {self.compute_done(agent)}\n")
+        for grid_row in grid:
+            spots = [(3-len(c))*" "+c if len(c) < 3 else c for c in grid_row]
+            out.write("".join(spots)+"\n")
+
     def compute_observation(self, agent):
         ax, ay = self.agent_positions[agent]
         wx, wy = self.window_size

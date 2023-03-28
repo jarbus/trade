@@ -46,6 +46,7 @@ def get_args():
     parser.add_argument('--resume', action="store_true")
     parser.add_argument('--punish', action="store_true")
     parser.add_argument('--pbt', action="store_true")
+    parser.add_argument('--interactive', action="store_true")
     return parser.parse_args()
 
 if __name__ == "__main__":

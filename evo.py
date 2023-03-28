@@ -403,34 +403,67 @@ if __name__ == "__main__":
     print("BEGINNING LOOP")
     prev_result = {'custom_metrics': {}}
     load(trainer, EXP_DIR)
-    for i in range(1000):
-        for j in range(40*(args.pop_size)):
-            print("Training")
-            result = trainer.train()
-            print("Trained")
-            # trainer.train() returns a result with the same custom_metric dict
-            # if no new episodes were completed. in this case, skip logging.
-            if not result["custom_metrics"] or  result["custom_metrics"] == prev_result['custom_metrics']:
-                print("Skipping no new results")
-                continue
 
-            print("Writing results")
-            results_df = add_row(results_df, result)
-            
-            
-            prev_result = result
+    def run_training():
+        for i in range(1000):
+            for j in range(40*(args.pop_size)):
+                print("Training")
+                result = trainer.train()
+                print("Trained")
+                # trainer.train() returns a result with the same custom_metric dict
+                # if no new episodes were completed. in this case, skip logging.
+                if not result["custom_metrics"] or  result["custom_metrics"] == prev_result['custom_metrics']:
+                    print("Skipping no new results")
+                    continue
 
-        # TODO:figure out why this is not returning num_env_episodes
-        #print("Evolve")
-        tmp_result_file = RESULT_FILE+"-tmp"
-        results_df.round(2).to_csv(tmp_result_file, index=False)
-        run(f"mv -f {tmp_result_file} {RESULT_FILE}".split())
+                print("Writing results")
+                results_df = add_row(results_df, result)
+                
+                
+                prev_result = result
 
-        if not args.noevo:
-            evolve(trainer)
-        else:
-            trainer.evaluate()
+            # TODO:figure out why this is not returning num_env_episodes
+            #print("Evolve")
+            tmp_result_file = RESULT_FILE+"-tmp"
+            results_df.round(2).to_csv(tmp_result_file, index=False)
+            run(f"mv -f {tmp_result_file} {RESULT_FILE}".split())
 
-        if i % 20 == 0:
-            print(f"Saving trainer for timestamp {timestamp()}")
-            save(trainer, EXP_DIR)
+            if not args.noevo:
+                evolve(trainer)
+            else:
+                trainer.evaluate()
+
+            if i % 20 == 0:
+                print(f"Saving trainer for timestamp {timestamp()}")
+                save(trainer, EXP_DIR)
+
+
+    def run_interactive():
+        obss = test_env.reset()
+        test_env.render_interactive()
+        states = {}
+        for agent in test_env.agents:
+            policy = trainer.get_policy(agent)
+            states[agent] = policy.get_initial_state()
+
+        for i in range(100):
+            actions = {}
+            for agent in obss.keys():
+                policy = trainer.get_policy(agent)
+                actions[agent], states[agent], logits = policy.compute_single_action(obs=np.array(obss[agent]), state=states[agent], policy_id=agent)
+                # override agent action with custom input if specified
+                act = input(f'act for {agent}:')
+                if act:
+                    actions[agent] = int(act)
+
+            obss, rews, dones, infos = test_env.step({agent: action for agent, action in actions.items() if not test_env.compute_done(agent)})
+            test_env.render_interactive()
+            if dones["__all__"]:
+                print("--------FINAL-STEP--------")
+                #test_env.render()
+                print("game over")
+                break
+    if args.interactive:
+        run_interactive()
+    else:
+        run_training()
