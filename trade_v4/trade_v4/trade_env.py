@@ -108,8 +108,8 @@ class Trade(MultiAgentEnv):
 
         # (self + policies) * (food frames and pos frame)
         food_frame_and_agent_channels = (2) * (self.food_types+1)
-        # x, y + agents_and_foods + food frames + comms
-        self.channels = 2 + food_frame_and_agent_channels + (self.food_types) + (self.vocab_size) + int(self.punish) + int(self.day_night_cycle)
+        # agents_and_foods + food frames + comms
+        self.channels = food_frame_and_agent_channels + (self.food_types) + (self.vocab_size) + int(self.punish) + int(self.day_night_cycle)
         self.agent_food_counts = dict()
         self.MOVES = ["UP", "DOWN", "LEFT", "RIGHT"]
         if self.punish:
@@ -268,7 +268,7 @@ class Trade(MultiAgentEnv):
         xpos_frame = np.repeat(np.arange(gy).reshape(1, gy), gx, axis=0) / gx
         ypos_frame = np.repeat(np.arange(gx).reshape(gx, 1), gy, axis=1) / gy
 
-        frames = np.stack([*food_frames, *agent_and_food_frames, xpos_frame, ypos_frame, *light_frames], axis=2)
+        frames = np.stack([*food_frames, *agent_and_food_frames, *light_frames], axis=2)
         padded_frames = np.full((*self.padded_grid_size, frames.shape[2]), -1, dtype=np.float32)
         padded_frames[wx:(gx+wx), wy:(gy+wy), :] = frames
         obs = padded_frames[minx:maxx, miny:maxy, :] / SCALE_DOWN
