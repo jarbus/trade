@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import shutil
 import numpy as np
 import ray
 import glob
@@ -231,9 +232,18 @@ def add_row(df, result):
     return pd.concat([df, new_row], ignore_index=True, sort=False)
 
 def save(trainer, path):
+    # make a list of all previous checkpoints
+    prev_checks = []
+    for f in glob.glob(f"{os.path.join(path, '*')}"):
+        if re.match(".*checkpoint-(\d+)", f):
+            prev_checks.append(f)
+    
     trainer.save_checkpoint(path)
     with open(os.path.join(path, "policies.p"), "wb") as f:
         pickle.dump(list(trainer.config["multiagent"]["policies"].keys()), f)
+    # delete previous checkpoints
+    for f in prev_checks:
+        shutil.rmtree(f)
 
 def load(trainer, path):
     print("Loading checkpoint from", path)
