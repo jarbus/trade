@@ -243,7 +243,7 @@ def save(trainer, path):
         pickle.dump(list(trainer.config["multiagent"]["policies"].keys()), f)
     # delete previous checkpoints
     for f in prev_checks:
-        shutil.rmtree(f)
+        os.remove(f)
 
 def load(trainer, path):
     print("Loading checkpoint from", path)
@@ -289,7 +289,6 @@ def load(trainer, path):
 
 
 if __name__ == "__main__":
-    results_df = pd.DataFrame()
 
     args = get_args()
     CLASS_DIR = os.path.join(RESULTS_DIR, f"{args.class_name}")
@@ -411,10 +410,11 @@ if __name__ == "__main__":
     trainer = ReusablePPOTrainer(config=config, env=Trade)
 
     print("BEGINNING LOOP")
-    prev_result = {'custom_metrics': {}}
     load(trainer, EXP_DIR)
 
     def run_training():
+        prev_result = {'custom_metrics': {}}
+        results_df = pd.DataFrame()
         for i in range(1000):
             for j in range(40*(args.pop_size)):
                 print("Training")
@@ -441,7 +441,8 @@ if __name__ == "__main__":
             if not args.noevo:
                 evolve(trainer)
             else:
-                trainer.evaluate()
+                eval_mets = trainer.evaluate()
+                print(eval_mets)
 
             if i % 20 == 0:
                 print(f"Saving trainer for timestamp {timestamp()}")
