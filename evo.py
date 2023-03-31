@@ -301,7 +301,7 @@ if __name__ == "__main__":
 
     pops = [[f"f{f}a{a}" for a in range(args.pop_size//args.food_types)] for f in range(args.food_types)]
     matchups = [[a for pop in pops for a in pop]]
-    env_config = {"window": (3, 3),
+    env_config = {"window": (5, 5),
         "grid": (args.gx, args.gy),
         "food_types": 2,
         "latest_agent_ids": [(args.pop_size//args.food_types)-1 for _ in range(args.food_types)],
