@@ -80,6 +80,7 @@ class Trade(MultiAgentEnv):
         self.dist_coeff            = env_config.get("dist_coeff", 0.0)
         self.move_coeff            = env_config.get("move_coeff", 0.0)
         self.death_prob            = env_config.get("death_prob", 0.1)
+        self.num_piles             = env_config.get("num_piles", 5)
         self.day_night_cycle       = env_config.get("day_night_cycle", False)
         self.day_steps             = env_config.get("day_steps", 20)
         self.fires                 = env_config.get("fires")
@@ -159,13 +160,12 @@ class Trade(MultiAgentEnv):
         #food_counts = [(0, fc), (0, fc), (1, fc), (1, fc)]
         food_counts = [(f[0], fc) for f in self.foods]
         self.table[:,:,:,:] = 0
-        num_piles = int(fc)
 
-        for i in range(num_piles):
+        for i in range(self.num_piles):
             spawn_spots = self.food_spawner.gen_poses()
             for spawn_spot, (ft, fc) in zip(spawn_spots, food_counts):
                 fx, fy = spawn_spot
-                self.table[fx, fy, ft, len(self.agents)] += fc / num_piles
+                self.table[fx, fy, ft, len(self.agents)] += fc / self.num_piles
 
     def reset(self):
 

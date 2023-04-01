@@ -20,6 +20,7 @@ def get_args():
     parser.add_argument('--fires', nargs='+', type=int, help="x,y of fires")
     parser.add_argument('--foods', nargs='+', type=int, help="x,y of foods")
     parser.add_argument('--batch-size', type=int, default=500)
+    parser.add_argument('--num-piles', type=int)
     parser.add_argument('--day-night-cycle', action="store_true")
     parser.add_argument('--day-steps', type=int, default=20)
     parser.add_argument('--night-time-death-prob', type=float, default=0.1)

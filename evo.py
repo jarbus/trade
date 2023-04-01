@@ -308,6 +308,7 @@ if __name__ == "__main__":
         "matchups": matchups,
         "episode_length": args.episode_length,
         "move_coeff": args.move_coeff,
+        "num_piles": args.num_piles,
         "dist_coeff": args.dist_coeff,
         "ineq_coeff": args.ineq_coeff,
         "death_prob": args.death_prob,
