@@ -340,6 +340,7 @@ if __name__ == "__main__":
     pol_config = {
         "model": {"medium": models.medium,
                   "small": models.small,
+                  "extrasmall": models.extrasmall,
                   "large": models.large}[args.model],
         "gamma": 0.99,
     }
