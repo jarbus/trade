@@ -338,10 +338,7 @@ if __name__ == "__main__":
     act_space = test_env.action_space
 
     pol_config = {
-        "model": {"medium": models.medium,
-                  "small": models.small,
-                  "extrasmall": models.extrasmall,
-                  "large": models.large}[args.model],
+        "model": getattr(models, args.model),
         "gamma": 0.99,
     }
     pol_spec = PolicySpec(None, obs_space, act_space, pol_config)
