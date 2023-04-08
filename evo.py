@@ -444,8 +444,8 @@ if __name__ == "__main__":
                 evolve(trainer)
             else:
                 eval_mets = trainer.evaluate()
-                eval_df = pd.DataFrame(eval_mets)
-                eval_df.to_csv(EVAL_FILE, mode='a', header=os.path.exists(EVAL_FILE), index=False)
+                eval_df = pd.DataFrame.from_dict(eval_mets['evaluation']["custom_metrics"], orient="index").T
+                eval_df.to_csv(EVAL_FILE, mode='a', header=(not os.path.exists(EVAL_FILE)), index=False)
                 print(eval_mets)
 
             if i % 20 == 0:
