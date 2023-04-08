@@ -298,6 +298,9 @@ if __name__ == "__main__":
     os.path.exists(EXP_DIR) or os.mkdir(EXP_DIR)
 
     RESULT_FILE=os.path.join(EXP_DIR,"results.txt")
+    EVAL_FILE = os.path.join(EXP_DIR, "eval.csv")
+
+
 
     pops = [[f"f{f}a{a}" for a in range(args.pop_size//args.food_types)] for f in range(args.food_types)]
     matchups = [[a for pop in pops for a in pop]]
@@ -441,6 +444,8 @@ if __name__ == "__main__":
                 evolve(trainer)
             else:
                 eval_mets = trainer.evaluate()
+                eval_df = pd.DataFrame(eval_mets)
+                eval_df.to_csv(EVAL_FILE, mode='a', header=os.path.exists(EVAL_FILE), index=False)
                 print(eval_mets)
 
             if i % 20 == 0:
