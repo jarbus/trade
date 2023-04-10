@@ -264,6 +264,7 @@ def load(trainer, path):
 
     if newest_checkpoint:
 
+        assert new_check > 0
         print(f"Restoring from {check_path}")
         for pol in policies.copy().keys():
             print(f"Removing {pol}")
@@ -277,6 +278,7 @@ def load(trainer, path):
 
         trainer.reset_config(config)
         trainer.load_checkpoint(check_path)
+        trainer._iteration = new_check
         loaded_pops = policies_to_pops(saved_pols)
         assert all(len(pop) > 0 for pop in loaded_pops)
         matchups = [[a for pop in pops for a in pop]]
