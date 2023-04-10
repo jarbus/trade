@@ -140,90 +140,6 @@ def rm_pol(pol_name: str):
             policy_mapping_fn=POLICY_MAPPING_FN,
             policies_to_train=list(config["multiagent"]["policies"].keys()))
 
-def mutate_weights(weights: dict):
-    for d in weights.keys():
-        weights[d] = weights[d]# + (0.1 * np.random.normal(size=weights[d].shape))
-    return weights
-
-def cp_and_mut(src_pol: str, dst_pol: str):
-    #print(f"Mutated copy: {src_pol}->{dst_pol}")
-    trainer.set_weights({dst_pol: mutate_weights( copy.deepcopy( trainer.get_weights([src_pol]))[src_pol])})
-
-def sort_pops(rewards: Dict[str, int]) -> List[List[Tuple[float, str]]]:
-    food_pols = [[] for _ in range(args.food_types)]
-    for pol in rewards.keys():
-        try:
-            f, a = re.match(r"f(\d+)a(\d+)", pol).groups()
-            food_pols[int(f)].append((rewards[pol], pol))
-        except:
-            continue
-    for f in range(len(food_pols)):
-        food_pols[f].sort()
-    print(food_pols)
-    assert len(set([len(fp) for fp in food_pols])) == 1
-    return food_pols
-
-def selection(pops_rewards: List[List[Tuple[float, str]]]):
-    # Assert that each pop has the same num of agents
-    assert len(set([len(pop) for pop in pops_rewards])) == 1
-    new_pops_rewards = []
-    for pop in pops_rewards:
-        mid = len(pop)//2
-        for pol in sorted(pop)[:mid]:
-            rm_pol(pol[1])
-        new_pops_rewards.append(pop[mid:])
-    assert len(new_pops_rewards[-1]) == len(pops_rewards[-1])//2, "Selection did not halve the population."
-    return new_pops_rewards
-
-def reproduction(pops_rewards: List[List[Tuple[float, str]]]):
-    #print("Beginning reproduction")
-    new_pops = []
-    for f, pop in enumerate(pops_rewards):
-        pols = [pol[1] for pol in pop]
-        new_pops.append(pols.copy())
-        # Compute fitness-proportional selection probabilities
-        rews = np.array([pol[0] for pol in pop])
-        probs = rews - rews.min()
-        if probs.sum() == 0:
-            probs = np.array([1/len(probs) for _ in probs])
-        else:
-            probs = probs / probs.sum()
-        # Create mutated copies of selected policies 
-        # proportional to their fitness to double 
-        # the population size
-        for _ in range(len(pop)):
-            src_pol = np.random.choice(pols, p=probs)
-            new_pol = add_pol(f)
-            cp_and_mut(src_pol, new_pol)
-            new_pops[f].append(new_pol)
-
-    return new_pops
-
-def evolve(trainer):
-    evaluate_result = trainer.evaluate()
-    eval_rewards = evaluate_result["evaluation"]["policy_reward_mean"]
-    sorted_pops = sort_pops(eval_rewards)
-    with open(os.path.join(EXP_DIR,"evo.txt"), "a") as f:
-        f.write(f"Generation @ time {timestamp()}:\n")
-        for pop in sorted_pops:
-            for rew, pol in pop:
-                f.write(str(round(rew, 2))+"\t"+pol+"\n")
-        
-    selected_pops = selection(sorted_pops)
-    new_pops = reproduction(selected_pops)
-    matchups = [[a for pop in pops for a in pop]]
-    config["env_config"]["matchups"] = matchups
-    #print(f"Setting new matchups: {matchups}")
-    weights = trainer.get_weights()
-    trainer.reset_config(config)
-    trainer.set_weights(weights)
-
-    for w in trainer.workers.remote_workers():
-        w.foreach_env.remote(
-                lambda env: env.set_matchups(matchups))
-    return new_pops
-
-
 def add_row(df, result):
     new_row = pd.DataFrame(result["custom_metrics"], index=[1])
     for stat in ["min", "max", "mean"]:
@@ -436,19 +352,14 @@ if __name__ == "__main__":
                 
                 prev_result = result
 
-            # TODO:figure out why this is not returning num_env_episodes
-            #print("Evolve")
             tmp_result_file = RESULT_FILE+"-tmp"
             results_df.round(2).to_csv(tmp_result_file, index=False)
             run(f"mv -f {tmp_result_file} {RESULT_FILE}".split())
 
-            if not args.noevo:
-                evolve(trainer)
-            else:
-                eval_mets = trainer.evaluate()
-                eval_df = pd.DataFrame.from_dict(eval_mets['evaluation']["custom_metrics"], orient="index").T
-                eval_df.to_csv(EVAL_FILE, mode='a', header=(not os.path.exists(EVAL_FILE)), index=False)
-                print(eval_mets)
+            eval_mets = trainer.evaluate()
+            eval_df = pd.DataFrame.from_dict(eval_mets['evaluation']["custom_metrics"], orient="index").T
+            eval_df.round(2).to_csv(EVAL_FILE, mode='a', header=(not os.path.exists(EVAL_FILE)), index=False)
+            print(eval_mets)
 
             if i % 20 == 0:
                 print(f"Saving trainer for timestamp {timestamp()}")
