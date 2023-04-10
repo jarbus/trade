@@ -164,6 +164,7 @@ def save(trainer, path):
 def load(trainer, path):
     print("Loading checkpoint from", path)
     global policies, results_df, RESULT_FILE
+    results_df = pd.DataFrame()
     if os.path.exists(RESULT_FILE):
         results_df = pd.read_csv(RESULT_FILE)
 
@@ -334,7 +335,6 @@ if __name__ == "__main__":
 
     def run_training():
         prev_result = {'custom_metrics': {}}
-        results_df = pd.DataFrame()
         for i in range(1000):
             for j in range(40*(args.pop_size)):
                 print("Training")
