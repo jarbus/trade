@@ -360,6 +360,7 @@ if __name__ == "__main__":
             run(f"mv -f {tmp_result_file} {RESULT_FILE}".split())
 
             eval_mets = trainer.evaluate()
+            eval_mets["evaluation"]["custom_metrics"]["step"] = trainer._iteration
             eval_df = pd.DataFrame.from_dict(eval_mets['evaluation']["custom_metrics"], orient="index").T
             eval_df.round(2).to_csv(EVAL_FILE, mode='a', header=(not os.path.exists(EVAL_FILE)), index=False)
             print(eval_mets)
