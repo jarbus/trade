@@ -195,7 +195,10 @@ class Trade(MultiAgentEnv):
         self.agent_positions = {agent: spawn_spot for agent, spawn_spot in zip(self.agents, spawn_spots)}
         self.steps = 0
         self.communications = {agent: [0 for j in range(self.vocab_size)] for agent in self.agents}
-        self.agent_food_counts = {agent: [self.food_agent_start for f in range(self.food_types)] for agent in self.agents}
+        # assumption: agent names follow a pattern fxay where x is a food type and y is an agent number
+        # when agents start with a resource, we use x to determine what resource they start with
+        # this assumption reduces lots of complexity elsewhere
+        self.agent_food_counts = {agent: [self.food_agent_start * float(agent[1]==str(f)) for f in range(self.food_types) ] for agent in self.agents}
         self.mc = TradeMetricCollector(self)
         # keep old copy of player exchanges
         self.player_exchanges = self.mc.player_exchanges.copy()  

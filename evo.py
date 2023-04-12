@@ -348,9 +348,11 @@ if __name__ == "__main__":
                     continue
 
                 print("Writing results")
+                result["custom_metrics"]["step"] = trainer._iteration
                 results_df = add_row(results_df, result)
-                
-                
+                # we remove the step from the custom_metrics dict so that
+                # we can skip equal results
+                del result["custom_metrics"]["step"]
                 prev_result = result
 
             tmp_result_file = RESULT_FILE+"-tmp"
@@ -358,6 +360,7 @@ if __name__ == "__main__":
             run(f"mv -f {tmp_result_file} {RESULT_FILE}".split())
 
             eval_mets = trainer.evaluate()
+            eval_mets["evaluation"]["custom_metrics"]["step"] = trainer._iteration
             eval_df = pd.DataFrame.from_dict(eval_mets['evaluation']["custom_metrics"], orient="index").T
             eval_df.round(2).to_csv(EVAL_FILE, mode='a', header=(not os.path.exists(EVAL_FILE)), index=False)
             print(eval_mets)
