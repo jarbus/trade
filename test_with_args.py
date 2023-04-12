@@ -34,6 +34,7 @@ env_config = {"window": (3, 3),
     "light_coeff": args.light_coeff,
     "punish_coeff": args.punish_coeff,
     "food_agent_start": args.food_agent_start,
+    "caps": args.caps,
     "food_env_spawn": args.food_env_spawn,
     "day_night_cycle": args.day_night_cycle,
     "night_time_death_prob": args.night_time_death_prob,
@@ -47,5 +48,4 @@ test_env.render()
 test_env.reset()
 # print(test_env.agent_positions)
 # print(test_env.agent_positions)
-
 

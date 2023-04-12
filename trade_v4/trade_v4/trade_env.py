@@ -80,6 +80,7 @@ class Trade(MultiAgentEnv):
         self.dist_coeff            = env_config.get("dist_coeff", 0.0)
         self.move_coeff            = env_config.get("move_coeff", 0.0)
         self.death_prob            = env_config.get("death_prob", 0.1)
+        self.caps                  = env_config.get("caps")
         self.num_piles             = env_config.get("num_piles", 5)
         self.day_night_cycle       = env_config.get("day_night_cycle", False)
         self.day_steps             = env_config.get("day_steps", 20)
@@ -428,7 +429,8 @@ class Trade(MultiAgentEnv):
                 symbol = action - (self.food_types * 2) - 4
                 assert symbol in range(self.vocab_size)
                 self.communications[agent][symbol] = 1
-            self.agent_food_counts[agent] = [max(x - METABOLISM, 0) for x in self.agent_food_counts[agent]]
+            self.agent_food_counts[agent] = [np.clip(x - METABOLISM, 0, c) for (c,x) in zip(self.caps, self.agent_food_counts[agent])]
+
 
             if agent == self.agents[-1]:
                 self.steps += 1

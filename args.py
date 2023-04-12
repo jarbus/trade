@@ -19,6 +19,7 @@ def get_args():
     parser.add_argument('--spawn-food', type=str, help="[corner, doublecorner]", default="corner")
     parser.add_argument('--fires', nargs='+', type=int, help="x,y of fires")
     parser.add_argument('--foods', nargs='+', type=int, help="x,y of foods")
+    parser.add_argument('--caps', nargs='+', type=int, help="f caps of foods")
     parser.add_argument('--batch-size', type=int, default=500)
     parser.add_argument('--num-piles', type=int)
     parser.add_argument('--day-night-cycle', action="store_true")
