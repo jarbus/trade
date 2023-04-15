@@ -9,8 +9,8 @@ def act(env, acts):
 def random_actions(env):
     return {agent: random.randint(0, len(env.MOVES)-1) for agent in env.agents if not env.compute_done(agent)}
 
-p0 = "player_0"
-p1 = "player_1"
+p0 = "f0a0"
+p1 = "f1a0"
 default_config = {
         "window": (1, 1),
         "grid": (11, 11),
@@ -26,6 +26,7 @@ default_config = {
         #"death_prob": 0.1,
         "food_env_spawn": 10.0,
         "random_start": False,
+        "caps": [10, 10],
         "respawn": True,
         "survival_bonus": 1,
         "punish": False,
@@ -38,6 +39,7 @@ default_config = {
 
 
 class TestTrade(unittest.TestCase):
+
 
     def test_deterministic_spawn(self):
         config = default_config.copy()
@@ -85,7 +87,7 @@ class TestTrade(unittest.TestCase):
         self.assertAlmostEqual(env.mc.num_exchanges[0], PLACE_AMOUNT)
         self.assertAlmostEqual(env.mc.num_exchanges[1], PLACE_AMOUNT)
 
-    def test_pick(self):
+    def test_pick_specialty(self):
         config = default_config.copy()
         config["grid"] = (11,11)
         config["food_env_spawn"] = 10.0
@@ -97,10 +99,31 @@ class TestTrade(unittest.TestCase):
         env.table[0, 0, 0, 2] = 1
         env.table[0, 0, 1, 2] = 1
         fc = env.agent_food_counts[p0].copy(), env.agent_food_counts[p1].copy()
-        env.step(act(env, {"player_0": "PICK_0"}))
-        env.step(act(env, {"player_1": "PICK_1"}))
+        env.step(act(env, {"f0a0": "PICK_0"}))
+        env.step(act(env, {"f1a0": "PICK_1"}))
         self.assertAlmostEqual(fc[0][0] - METABOLISM + 1, env.agent_food_counts[p0][0])
         self.assertAlmostEqual(fc[1][1] - METABOLISM + 1, env.agent_food_counts[p1][1])
+        self.assertAlmostEqual(env.mc.picked_counts["f0a0"][0], 1)
+        self.assertAlmostEqual(env.mc.picked_counts["f1a0"][1], 1)
+
+    def test_pick_nonspecialty(self):
+        config = default_config.copy()
+        config["grid"] = (11,11)
+        config["food_env_spawn"] = 10.0
+        env = Trade(config)
+        env.reset()
+        env.agent_positions[p0] = (0,0)
+        env.agent_positions[p1] = (0,0)
+        env.table = np.zeros(env.table.shape)
+        env.table[0, 0, 0, 2] = 1
+        env.table[0, 0, 1, 2] = 1
+        fc = env.agent_food_counts[p0].copy(), env.agent_food_counts[p1].copy()
+        env.step(act(env, {"f0a0": "PICK_1"}))
+        env.step(act(env, {"f1a0": "PICK_0"}))
+        self.assertAlmostEqual(fc[0][1] - METABOLISM + 0.5, env.agent_food_counts[p0][1])
+        self.assertAlmostEqual(fc[1][0] - METABOLISM + 0.5, env.agent_food_counts[p1][0])
+        self.assertAlmostEqual(env.mc.picked_counts["f0a0"][1], 0.5)
+        self.assertAlmostEqual(env.mc.picked_counts["f1a0"][0], 0.5)
 
     def test_light(self):
         # Create config with 7x7 grid
@@ -199,8 +222,17 @@ class TestTrade(unittest.TestCase):
     #    self.assertTrue(np.array_equal(obs1, obs2))
 
 
-
-
+import unittest
+def testsuite():
+    suite = unittest.TestSuite()
+    suite.addTest(TestTrade("test_pick_specialty"))
+    suite.addTest(TestTrade("test_pick_nonspecialty"))
+    # suite.addTest(TestTrade("test_exchange"))
+    # suite.addTest(TestTrade("test_light"))
+    #suite.addTest(TestTrade("test_policy_frames"))
+    return suite
 
 if __name__ == '__main__':
-    unittest.main()
+    # unittest.main()
+    runner = unittest.TextTestRunner()
+    runner.run(testsuite())

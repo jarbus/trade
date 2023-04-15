@@ -44,7 +44,7 @@ class TradeMetricCollector():
             for i, other_agent in enumerate(env.agents):
                 self.player_exchanges[(other_agent, agent, food)] += env.table[x, y, food, i]
         self.num_exchanges[food] += exchange_amount
-        self.picked_counts[agent][food] += env.compute_pick_amount(x, y, food, agent_id)
+        self.picked_counts[agent][food] += env.compute_pick_amount(x, y, food, agent)
         pass
 
     def collect_rew(self, env, base_health, shared_health, nn, twonn, other_survival_bonus, pun_rew, mov_rew, light, action_rewards, ineq):
@@ -151,6 +151,9 @@ class Trade(MultiAgentEnv):
         #print(f"Render path set to {self.render_path}")
         #print(f"Matchups set to {self.matchups} in that order")
         #self.reset()
+
+    def food_multiplier(self, agent: str, food: int):
+        return 1 if int(agent[1]) == food else 0.5
 
     def seed(self, seed=None):
         if seed:
@@ -363,8 +366,8 @@ class Trade(MultiAgentEnv):
     def compute_exchange_amount(self, x: int, y: int, food: int, picker: int):
         return sum(count for a, count in enumerate(self.table[x][y][food]) if a != picker and a != len(self.agents))
 
-    def compute_pick_amount(self, x: int, y: int, food: int, picker: int):
-        return self.table[x][y][food][len(self.agents)]
+    def compute_pick_amount(self, x: int, y: int, food: int, agent: str):
+        return self.table[x][y][food][len(self.agents)] * self.food_multiplier(agent, food)
 
     def update_dones(self):
         for agent in self.agents:
@@ -373,14 +376,6 @@ class Trade(MultiAgentEnv):
             self.dones[agent] = self.steps >= self.max_steps
     def next_agent(self, agent):
         return self.agents[(self.agents.index(agent)+1) % len(self.agents)]
-        #    if max(self.agent_food_counts[agent]) < 0.1:
-        #        self.dones[agent] = True
-        #    else:
-        #        for f in self.agent_food_counts[agent]:
-        #            if f < 0.1 and random() < self.death_prob:
-        #                self.dones[agent] = True
-        #    if not self.light.contains(self.agent_positions[agent]) and random() < self.night_time_death_prob:
-        #        self.dones[agent] = True
 
     def step(self, actions):
 
@@ -409,15 +404,17 @@ class Trade(MultiAgentEnv):
                 pick = ((action - ndir - int(self.punish)) % 2 == 0)
                 food = floor((action - ndir - int(self.punish)) / 2)
                 if pick:
+                    # Compute metrics before
                     self.mc.collect_pick(self, agent, x, y, food, aid)
-                    self.agent_food_counts[agent][food] += np.sum(self.table[x, y, food])
-                    # pickup reward
-                    #self.action_rewards[agent] += np.sum(self.table[x, y, food, :aid])
-                    self.action_rewards[agent] += np.sum(self.table[x, y, food, -1])
-                    # Sharing reward
-                    #for oaid, oa in enumerate(self.agents):
-                    #    if oa != agent:
-                    #        self.action_rewards[oa] += np.sum(self.table[x, y, food, oaid])
+                    # Compute amount foraged from env
+                    env_food = self.compute_pick_amount(x, y, food, agent)
+                    # Compute amount collected from agents
+                    non_env_food = np.sum(self.table[x, y, food, :-1])
+                    # Update agent food counts
+                    self.agent_food_counts[agent][food] += env_food + non_env_food
+                    # Set action reward
+                    self.action_rewards[agent] += non_env_food
+                    # Clear table
                     self.table[x, y, food, :] = 0
                 elif self.agent_food_counts[agent][food] >= PLACE_AMOUNT:
                     actual_place_amount = PLACE_AMOUNT
