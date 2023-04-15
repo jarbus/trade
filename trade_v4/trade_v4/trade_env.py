@@ -413,7 +413,7 @@ class Trade(MultiAgentEnv):
                     # Update agent food counts
                     self.agent_food_counts[agent][food] += env_food + non_env_food
                     # Set action reward
-                    self.action_rewards[agent] += non_env_food
+                    self.action_rewards[agent] += env_food
                     # Clear table
                     self.table[x, y, food, :] = 0
                 elif self.agent_food_counts[agent][food] >= PLACE_AMOUNT:
