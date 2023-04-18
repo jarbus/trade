@@ -26,7 +26,7 @@ default_config = {
         #"death_prob": 0.1,
         "food_env_spawn": 10.0,
         "random_start": False,
-        "caps": [10, 10],
+        "caps": [1, 1],
         "respawn": True,
         "survival_bonus": 1,
         "punish": False,
@@ -40,6 +40,55 @@ default_config = {
 
 class TestTrade(unittest.TestCase):
 
+    def test_cap_spawn(self):
+        """Test that agents can't pick up more food than
+        their caps for spawned food"""
+        config = default_config.copy()
+        config["caps"] = (1 ,  1)
+        config["grid"] = (11, 11)
+        env = Trade(config)
+        env.reset()
+        env.agent_positions[p0] = (0,0)
+        env.agent_positions[p1] = (0,0)
+        env.table = np.zeros(env.table.shape)
+        env.table[0, 0, 0, 2] = 2
+        env.table[0, 0, 1, 2] = 2
+        env.step(act(env, {"f0a0": "PICK_0"}))
+        env.step(act(env, {"f1a0": "PICK_1"}))
+
+        self.assertEqual(env.agent_food_counts[p0][0],
+                         env.caps[0] - METABOLISM)
+        self.assertEqual(env.agent_food_counts[p1][1],
+                         env.caps[1] - METABOLISM)
+        self.assertEqual(env.table[0, 0, 0, 2], 1)
+        self.assertEqual(env.table[0, 0, 1, 2], 1)
+
+    def test_cap_drop(self):
+        """Test that agents can't pick up more food than
+        their caps for dropped food"""
+        config = default_config.copy()
+        config["caps"] = (1 ,  1)
+        config["grid"] = (11, 11)
+        env = Trade(config)
+        env.reset()
+        env.agent_positions[p0] = (0,0)
+        env.agent_positions[p1] = (0,0)
+        env.table = np.zeros(env.table.shape)
+        env.table[0, 0, 0, 0] = 0.5
+        env.table[0, 0, 0, 1] = 1.5
+        env.table[0, 0, 1, 0] = 1.5
+        env.table[0, 0, 1, 1] = 0.5
+        env.step(act(env, {"f0a0": "PICK_0"}))
+        env.step(act(env, {"f1a0": "PICK_1"}))
+
+        self.assertEqual(env.agent_food_counts[p0][0],
+                         env.caps[0] - METABOLISM)
+        self.assertEqual(env.agent_food_counts[p1][1],
+                         env.caps[1] - METABOLISM)
+        self.assertEqual(env.table[0, 0, 0, 0], 0)
+        self.assertEqual(env.table[0, 0, 0, 1], 1)
+        self.assertEqual(env.table[0, 0, 1, 0], 0.5)
+        self.assertEqual(env.table[0, 0, 1, 1], 0.5)
 
     def test_deterministic_spawn(self):
         config = default_config.copy()
@@ -225,8 +274,10 @@ class TestTrade(unittest.TestCase):
 import unittest
 def testsuite():
     suite = unittest.TestSuite()
-    suite.addTest(TestTrade("test_pick_specialty"))
-    suite.addTest(TestTrade("test_pick_nonspecialty"))
+    # suite.addTest(TestTrade("test_pick_specialty"))
+    # suite.addTest(TestTrade("test_pick_nonspecialty"))
+    suite.addTest(TestTrade("test_cap_spawn"))
+    suite.addTest(TestTrade("test_cap_drop"))
     # suite.addTest(TestTrade("test_exchange"))
     # suite.addTest(TestTrade("test_light"))
     #suite.addTest(TestTrade("test_policy_frames"))

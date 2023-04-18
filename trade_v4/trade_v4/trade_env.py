@@ -367,7 +367,28 @@ class Trade(MultiAgentEnv):
         return sum(count for a, count in enumerate(self.table[x][y][food]) if a != picker and a != len(self.agents))
 
     def compute_pick_amount(self, x: int, y: int, food: int, agent: str):
-        return self.table[x][y][food][len(self.agents)] * self.food_multiplier(agent, food)
+        # compute spawned food to be collected
+        env_food = self.table[x][y][food][len(self.agents)] 
+        # multiply by agent's food multiplier
+        max_pick_food = env_food * self.food_multiplier(agent, food)
+        # compute capped food
+        agent_food = self.agent_food_counts[agent][food]
+        capped_food = min(agent_food + max_pick_food, self.caps[food])
+        # compute amount to be picked
+        picked_food = capped_food - agent_food
+        return picked_food
+
+    def compute_collect_amount(self, x: int, y: int, food: int, agent: str):
+        # compute dropped food to be collected
+        dropped_food = self.table[x][y][food][:-1].sum()
+        # compute capped food
+        agent_food = self.agent_food_counts[agent][food]
+        capped_food = min(agent_food + dropped_food, self.caps[food])
+        # compute amount to be collected
+        collected_food = capped_food - agent_food
+        return collected_food
+
+
 
     def update_dones(self):
         for agent in self.agents:
@@ -404,18 +425,38 @@ class Trade(MultiAgentEnv):
                 pick = ((action - ndir - int(self.punish)) % 2 == 0)
                 food = floor((action - ndir - int(self.punish)) / 2)
                 if pick:
-                    # Compute metrics before
+                    ###########
+                    # Forage from env
+                    ###########
+                    # Compute pick metrics before performing pick
                     self.mc.collect_pick(self, agent, x, y, food, aid)
-                    # Compute amount foraged from env
-                    env_food = self.compute_pick_amount(x, y, food, agent)
-                    # Compute amount collected from agents
-                    non_env_food = np.sum(self.table[x, y, food, :-1])
+                    # Compute amount foraged from env, includes multiplier
+                    env_food_picked = self.compute_pick_amount(x, y, food, agent)
+                    # Remove from env, ignore multiplier
+                    env_food_removed = env_food_picked / self.food_multiplier(agent, food)
+                    self.table[x, y, food, len(self.agents)] -= env_food_removed
+                    # Update food counts
+                    self.agent_food_counts[agent][food] += env_food_picked
+                    # Update pickup reward
+                    self.action_rewards[agent] += env_food_picked
+
+                    ######################################
+                    # Collect from agents
+                    ######################################
+                    dropped_food = self.compute_collect_amount(x, y, food, agent)
                     # Update agent food counts
-                    self.agent_food_counts[agent][food] += env_food + non_env_food
+                    self.agent_food_counts[agent][food] += dropped_food
                     # Set action reward
-                    self.action_rewards[agent] += env_food
-                    # Clear table
-                    self.table[x, y, food, :] = 0
+                    self.action_rewards[agent] += dropped_food
+                    # Clear food from table
+                    for i in range(len(self.agents)):
+                        amt_to_rm = min(self.table[x, y, food, i], dropped_food)
+                        dropped_food -= amt_to_rm
+                        self.table[x, y, food, i] -= amt_to_rm
+                        # all food has been cleared
+                        if dropped_food <= 0:
+                            break
+
                 elif self.agent_food_counts[agent][food] >= PLACE_AMOUNT:
                     actual_place_amount = PLACE_AMOUNT
                     self.agent_food_counts[agent][food] -= actual_place_amount
