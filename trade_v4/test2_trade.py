@@ -53,6 +53,7 @@ class TestTrade(unittest.TestCase):
         env.table = np.zeros(env.table.shape)
         env.table[0, 0, 0, 2] = 2
         env.table[0, 0, 1, 2] = 2
+        env.table[0, 0, 0, 0] = 2 # this should not get picked
         env.step(act(env, {"f0a0": "PICK_0"}))
         env.step(act(env, {"f1a0": "PICK_1"}))
 
@@ -62,6 +63,9 @@ class TestTrade(unittest.TestCase):
                          env.caps[1] - METABOLISM)
         self.assertEqual(env.table[0, 0, 0, 2], 1)
         self.assertEqual(env.table[0, 0, 1, 2], 1)
+        self.assertEqual(env.table[0, 0, 0, 0], 2)
+        self.assertEqual(env.action_rewards[p0], 1)
+        self.assertEqual(env.action_rewards[p1], 1)
 
     def test_cap_drop(self):
         """Test that agents can't pick up more food than
@@ -85,6 +89,9 @@ class TestTrade(unittest.TestCase):
                          env.caps[0] - METABOLISM)
         self.assertEqual(env.agent_food_counts[p1][1],
                          env.caps[1] - METABOLISM)
+
+        self.assertEqual(env.action_rewards[p0], 1)
+        self.assertEqual(env.action_rewards[p1], 1)
         self.assertEqual(env.table[0, 0, 0, 0], 0)
         self.assertEqual(env.table[0, 0, 0, 1], 1)
         self.assertEqual(env.table[0, 0, 1, 0], 0.5)
