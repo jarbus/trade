@@ -99,7 +99,7 @@ class Trade(MultiAgentEnv):
         self.health_baseline       = env_config.get("health_baseline", False)
         self.policy_mapping_fn     = env_config.get("policy_mapping_fn")
         self.food_env_spawn        = env_config.get("food_env_spawn")
-        self.food_agent_start      = env_config.get("food_agent_start", 1)
+        self.food_agent_start      = env_config.get("food_agent_start", 0)
         self.share_health          = env_config.get("share_health")
         self.padded_grid_size      = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
         self.light                 = Light(self.grid_size, self.fires, 2/self.day_steps)
