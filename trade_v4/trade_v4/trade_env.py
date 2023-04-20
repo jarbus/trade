@@ -127,8 +127,7 @@ class Trade(MultiAgentEnv):
         food_centers = [(fc[1], fc[2]) for fc in self.foods]
         self.food_spawner = FoodSpawner(self.grid_size, food_centers) 
         self.food_spawner = DiscreteFoodSpawner(self.grid_size, food_centers) 
-        # Note: ordering of food centers matters
-        self.agent_spawner = AgentSpawner(self.grid_size, food_centers)
+        self.agent_spawner = FireCornerSpawner(self.grid_size, self.fires)
 
         self.action_space = Discrete(self.num_actions)
         self.obs_size = (*add_tup(add_tup(self.window_size, self.window_size), (1, 1)), self.channels)
