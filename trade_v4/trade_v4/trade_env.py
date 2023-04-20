@@ -368,13 +368,19 @@ class Trade(MultiAgentEnv):
     def compute_pick_amount(self, x: int, y: int, food: int, agent: str):
         # compute spawned food to be collected
         env_food = self.table[x][y][food][len(self.agents)] 
+        assert env_food >= 0
         # multiply by agent's food multiplier
         max_pick_food = env_food * self.food_multiplier(agent, food)
+        assert max_pick_food >= 0
         # compute capped food
         agent_food = self.agent_food_counts[agent][food]
+        assert agent_food >= 0
+        assert agent_food <= self.caps[food]
         capped_food = min(agent_food + max_pick_food, self.caps[food])
+        assert capped_food >= 0
         # compute amount to be picked
         picked_food = capped_food - agent_food
+        assert picked_food >= 0
         return picked_food
 
     def compute_collect_amount(self, x: int, y: int, food: int, agent: str):
@@ -434,8 +440,15 @@ class Trade(MultiAgentEnv):
                     # Remove from env, ignore multiplier
                     env_food_removed = env_food_picked / self.food_multiplier(agent, food)
                     self.table[x, y, food, len(self.agents)] -= env_food_removed
+                    # handle minor floating point errors
+                    if -0.01 < self.table[x, y, food, len(self.agents)] < 0:
+                        self.table[x, y, food, len(self.agents)] = 0
+                    # throw exception if negative table value not a result of minor error
+                    elif self.table[x, y, food, len(self.agents)] <= -0.01:
+                        raise ValueError(f"Table entry is negative: {self.table[x, y, food, len(self.agents)]}")
                     # Update food counts
                     self.agent_food_counts[agent][food] += env_food_picked
+                    assert self.agent_food_counts[agent][food] <= self.caps[food]
                     # Update pickup reward
                     self.action_rewards[agent] += env_food_picked
 
