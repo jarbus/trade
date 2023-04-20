@@ -337,7 +337,9 @@ if __name__ == "__main__":
     def run_training():
         global results_df
         prev_result = {'custom_metrics': {}}
-        for i in range(1000):
+        i = 0
+        while True:
+            i += 1
             for j in range(40*(args.pop_size)):
                 print("Training")
                 result = trainer.train()
