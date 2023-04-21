@@ -40,6 +40,23 @@ default_config = {
 
 class TestTrade(unittest.TestCase):
 
+    def test_no_act_drop(self):
+        """Test that agents don't get action reward from dropped food"""
+        config = default_config.copy()
+        config["caps"] = (1 ,  1)
+        env = Trade(config)
+        env.reset()
+        env.agent_positions[p0] = (0,0)
+        env.agent_positions[p1] = (0,0)
+        env.table = np.zeros(env.table.shape)
+        env.table[0, 0, 0, 0] = 1
+        env.table[0, 0, 1, 1] = 1
+        self.assertEqual(env.action_rewards[p0], 0)
+        pick_amt = env.compute_pick_amount(0,0,0,"f0a0")
+        self.assertEqual(pick_amt, 0)
+        env.step(act(env, {"f0a0": "PICK_0"}))
+        self.assertEqual(env.action_rewards[p0], 0)
+
     def test_cap_spawn(self):
         """Test that agents can't pick up more food than
         their caps for spawned food"""
@@ -283,8 +300,9 @@ def testsuite():
     suite = unittest.TestSuite()
     # suite.addTest(TestTrade("test_pick_specialty"))
     # suite.addTest(TestTrade("test_pick_nonspecialty"))
-    suite.addTest(TestTrade("test_cap_spawn"))
-    suite.addTest(TestTrade("test_cap_drop"))
+    # suite.addTest(TestTrade("test_cap_spawn"))
+    # suite.addTest(TestTrade("test_cap_drop"))
+    suite.addTest(TestTrade("test_no_act_drop"))
     # suite.addTest(TestTrade("test_exchange"))
     # suite.addTest(TestTrade("test_light"))
     #suite.addTest(TestTrade("test_policy_frames"))

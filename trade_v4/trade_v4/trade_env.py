@@ -458,8 +458,6 @@ class Trade(MultiAgentEnv):
                     dropped_food = self.compute_collect_amount(x, y, food, agent)
                     # Update agent food counts
                     self.agent_food_counts[agent][food] += dropped_food
-                    # Set action reward
-                    self.action_rewards[agent] += dropped_food
                     # Clear food from table
                     for i in range(len(self.agents)):
                         amt_to_rm = min(self.table[x, y, food, i], dropped_food)
