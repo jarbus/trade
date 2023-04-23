@@ -298,7 +298,7 @@ if __name__ == "__main__":
             "gamma": .99,
             "model": pol_config["model"],
             "clip_param": 0.03,
-            "entropy_coeff": 0.05,
+            "entropy_coeff": args.entropy_coeff,
             'vf_loss_coeff': 0.25,
             "num_sgd_iter": 5,
             "sgd_minibatch_size": batch_size,

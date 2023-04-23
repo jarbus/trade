@@ -26,6 +26,7 @@ def get_args():
     parser.add_argument('--day-steps', type=int, default=20)
     parser.add_argument('--night-time-death-prob', type=float, default=0.1)
     parser.add_argument('--checkpoint-interval', type=int, default=500)
+    parser.add_argument('--entropy-coeff', type=float, default=0.05)
     parser.add_argument('--punish-coeff', type=float, default=2.0)
     parser.add_argument('--dist-coeff', type=float, default=0.0)
     parser.add_argument('--ineq-coeff', type=float, default=0.0)
