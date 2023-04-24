@@ -9,6 +9,16 @@ extrasmall = {
     "lstm_use_prev_action": False,
     "max_seq_len": 50,
 }
+extrasmall3 = {
+    "conv_filters": [[64, [3, 3], 1], [32, [3, 3], 1]],
+    "conv_activation": "relu",
+    "post_fcnet_hiddens": [256, 256],
+    "post_fcnet_activation": "relu",
+    "use_lstm": True,
+    "lstm_cell_size": 512,
+    "lstm_use_prev_action": False,
+    "max_seq_len": 50,
+}
 
 largeone = {
     "conv_filters": [[128, [1, 1], 1], [128, [1, 1], 1], [128, [1, 1], 1]],
