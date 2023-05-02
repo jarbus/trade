@@ -12,7 +12,7 @@ args = get_args()
 
 pops = [[f"f{f}a{a}" for a in range(args.pop_size//args.food_types)] for f in range(args.food_types)]
 matchups = [[a for pop in pops for a in pop]]
-env_config = {"window": (3, 3),
+env_config = {"window": (args.window, args.window),
     "grid": (args.gx, args.gy),
     "food_types": 2,
     "latest_agent_ids": [(args.pop_size//args.food_types)-1 for _ in range(args.food_types)],
@@ -21,6 +21,7 @@ env_config = {"window": (3, 3),
     "move_coeff": args.move_coeff,
     "dist_coeff": args.dist_coeff,
     "num_piles": args.num_piles,
+    "no_multiplier": args.no_multiplier,
     "pickup_coeff": args.pickup_coeff,
     "share_health": args.share_health,
     "respawn": args.respawn,

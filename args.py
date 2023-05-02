@@ -12,6 +12,8 @@ def get_args():
     parser.add_argument('--num-agents', type=int, default=4)
     parser.add_argument('--learning-rate', type=float, default=1e-04)
     parser.add_argument('--pop-size', type=int, default=10)
+    parser.add_argument('--no-multiplier', action="store_true")
+    parser.add_argument('--window', type=int, default=3)
     parser.add_argument('--episode-length', type=int, default=200)
     parser.add_argument('--class-name', type=str, default="class")
     parser.add_argument('--model', type=str, help="[small, medium, large]", default="medium")

@@ -99,6 +99,7 @@ class Trade(MultiAgentEnv):
         self.health_baseline       = env_config.get("health_baseline", False)
         self.policy_mapping_fn     = env_config.get("policy_mapping_fn")
         self.food_env_spawn        = env_config.get("food_env_spawn")
+        self.no_multiplier         = env_config.get("no_multiplier")
         self.food_agent_start      = env_config.get("food_agent_start", 0)
         self.share_health          = env_config.get("share_health")
         self.padded_grid_size      = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
@@ -152,6 +153,8 @@ class Trade(MultiAgentEnv):
         #self.reset()
 
     def food_multiplier(self, agent: str, food: int):
+        if self.no_multiplier:
+            return 1
         return 1 if int(agent[1]) == food else 0.5
 
     def seed(self, seed=None):
