@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import matplotlib.pyplot as plt
 from typing import Tuple, List
 
+gif.options.matplotlib["dpi"] = 600
 
 
 #plt.style.use('dark_background')
