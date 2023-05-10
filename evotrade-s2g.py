@@ -157,8 +157,9 @@ for i in range(num_steps):
 
         if m := re.match(exchange_expr, line):
             giver, amount, food, taker = m.groups()
-            step.exchange_messages.append(f"{giver} gave {amount} of {food} to {taker}")
-            all_exchange_messages.append(f"{giver} gave {amount} of {food} to {taker}")
+            msg = f"{giver} gave {round(float(amount),2)} of {food} to {taker}"
+            step.exchange_messages.append(msg)
+            all_exchange_messages.append(msg)
 
         if m := re.match(food_expr, line):
             food = m.groups()
@@ -167,7 +168,7 @@ for i in range(num_steps):
 
         if m := re.match(total_exchange_expr, line):
             total_exchanged = m.groups()
-            step.total_exchanged = [float(f) for f in total_exchanged]
+            step.total_exchanged = [round(float(f),2) for f in total_exchanged]
 
         if m := re.match(light_expr, line):
             # light = m.groups()[0]
