@@ -229,6 +229,7 @@ if __name__ == "__main__":
         "latest_agent_ids": [(args.pop_size//args.food_types)-1 for _ in range(args.food_types)],
         "matchups": matchups,
         "episode_length": args.episode_length,
+        "fire_radius": args.fire_radius,
         "move_coeff": args.move_coeff,
         "no_multiplier": args.no_multiplier,
         "num_piles": args.num_piles,

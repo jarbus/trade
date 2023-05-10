@@ -15,6 +15,7 @@ def get_args():
     parser.add_argument('--no-multiplier', action="store_true")
     parser.add_argument('--window', type=int, default=3)
     parser.add_argument('--episode-length', type=int, default=200)
+    parser.add_argument('--fire-radius', type=int, default=3)
     parser.add_argument('--class-name', type=str, default="class")
     parser.add_argument('--model', type=str, help="[small, medium, large]", default="medium")
     parser.add_argument('--spawn-agents', type=str, help="[center, corner, random]", default="center")

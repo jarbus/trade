@@ -80,6 +80,7 @@ class Trade(MultiAgentEnv):
         self.dist_coeff            = env_config.get("dist_coeff", 0.0)
         self.move_coeff            = env_config.get("move_coeff", 0.0)
         self.death_prob            = env_config.get("death_prob", 0.1)
+        self.fire_radius           = env_config.get("fire_radius")
         self.caps                  = env_config.get("caps")
         self.num_piles             = env_config.get("num_piles", 5)
         self.day_night_cycle       = env_config.get("day_night_cycle", False)
@@ -103,7 +104,8 @@ class Trade(MultiAgentEnv):
         self.food_agent_start      = env_config.get("food_agent_start", 0)
         self.share_health          = env_config.get("share_health")
         self.padded_grid_size      = add_tup(self.grid_size, add_tup(self.window_size, self.window_size))
-        self.light                 = Light(self.grid_size, self.fires, 2/self.day_steps)
+        self.light                 = Light(self.grid_size, self.fires, 2/self.day_steps, self.fire_radius)
+
         super().__init__()
 
         self.render_path = None

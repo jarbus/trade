@@ -9,13 +9,13 @@ def isclose(a,b):
     return abs(a-b) <= 1e-09
 
 class Light:
-    def __init__(self, grid_size: tuple, fires: List[Tuple], interval):
+    def __init__(self, grid_size: tuple, fires: List[Tuple], interval, radius=3):
         self.gx, self.gy = self.grid_size = grid_size
         self.light_level = 0
         self.interval = interval
         self.increasing = True
         self.fires = fires
-        self.fire_radius = 3
+        self.fire_radius = radius
         self.frame = self.fire_frame()
 
     def reset(self):

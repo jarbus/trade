@@ -20,6 +20,7 @@ env_config = {"window": (args.window, args.window),
     "episode_length": args.episode_length,
     "move_coeff": args.move_coeff,
     "dist_coeff": args.dist_coeff,
+    "fire_radius": args.fire_radius,
     "num_piles": args.num_piles,
     "no_multiplier": args.no_multiplier,
     "pickup_coeff": args.pickup_coeff,
@@ -49,4 +50,3 @@ test_env.render()
 test_env.reset()
 # print(test_env.agent_positions)
 # print(test_env.agent_positions)
-
