@@ -389,11 +389,15 @@ if __name__ == "__main__":
                 policy = trainer.get_policy(agent)
                 actions[agent], states[agent], logits = policy.compute_single_action(obs=np.array(obss[agent]), state=states[agent], policy_id=agent)
                 # override agent action with custom input if specified
-                act = input(f'act for {test_env.agents.index(agent)}:')[0]
+                act = input(f'act for {test_env.agents.index(agent)}:')
+                # only process first char
+                if len(act) > 1:
+                    act = act[0]
+                # map udlr to vim keys
                 vim="k j h l".split()
                 if act in vim:
                     act = vim.index(act)
-                if act:
+                if act != "":
                     actions[agent] = int(act)
 
             obss, rews, dones, infos = test_env.step({agent: action for agent, action in actions.items() if not test_env.compute_done(agent)})
