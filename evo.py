@@ -389,8 +389,8 @@ if __name__ == "__main__":
                 policy = trainer.get_policy(agent)
                 actions[agent], states[agent], logits = policy.compute_single_action(obs=np.array(obss[agent]), state=states[agent], policy_id=agent)
                 # override agent action with custom input if specified
-                act = input(f'act for {test_env.agents.index(agent)}:')
-                vim="h j k l".split()
+                act = input(f'act for {test_env.agents.index(agent)}:')[0]
+                vim="k j h l".split()
                 if act in vim:
                     act = vim.index(act)
                 if act:

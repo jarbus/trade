@@ -257,7 +257,7 @@ class Trade(MultiAgentEnv):
                     else:
                         grid[r, c] = grid[r, c] + foodtype
         out.write(f"--------STEP-{self.steps}--------\n")
-        vim="h j k l".split()
+        vim="k j h l".split()
         for i, move in enumerate(self.MOVES):
             if i <= 3:
                 chr = vim[i]
