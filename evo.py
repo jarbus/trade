@@ -383,13 +383,16 @@ if __name__ == "__main__":
             policy = trainer.get_policy(agent)
             states[agent] = policy.get_initial_state()
 
-        for i in range(100):
+        for i in range(400):
             actions = {}
             for agent in obss.keys():
                 policy = trainer.get_policy(agent)
                 actions[agent], states[agent], logits = policy.compute_single_action(obs=np.array(obss[agent]), state=states[agent], policy_id=agent)
                 # override agent action with custom input if specified
-                act = input(f'act for {agent}:')
+                act = input(f'act for {test_env.agents.index(agent)}:')
+                vim="h j k l".split()
+                if act in vim:
+                    act = vim.index(act)
                 if act:
                     actions[agent] = int(act)
 

@@ -257,8 +257,14 @@ class Trade(MultiAgentEnv):
                     else:
                         grid[r, c] = grid[r, c] + foodtype
         out.write(f"--------STEP-{self.steps}--------\n")
+        vim="h j k l".split()
         for i, move in enumerate(self.MOVES):
-            out.write(f"{i}: {move} ")
+            if i <= 3:
+                chr = vim[i]
+            else:
+                chr = i
+
+            out.write(f"{chr}: {move} ")
         out.write(f"\n")
         for agent in self.agents:
             out.write(f"{agent}: {self.agent_positions[agent]} {[round(fc, 2) for fc in self.agent_food_counts[agent]]} {self.compute_done(agent)}\n")
