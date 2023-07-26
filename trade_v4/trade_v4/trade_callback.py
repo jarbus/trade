@@ -1,14 +1,15 @@
 import numpy as np
 from ray.rllib.agents.callbacks import DefaultCallbacks
 from .utils import inv_dist
+from collections import defaultdict
 class TradeCallback(DefaultCallbacks):
 
     def on_episode_start(self, worker, base_env, policies, episode, **kwargs):
         env = base_env.get_unwrapped()[0]
         self.comm_history = [0 for i in range(env.vocab_size)]
         self.agent_dists = []
-        self.action_counts = {act: 0 for act in env.MOVES}
-        self.punish_counts = {agent: 0 for agent in env.agents}
+        self.action_counts = defaultdict(int, [(act, 0) for act in env.MOVES])
+        self.punish_counts = defaultdict(int, [(agent, 0) for agent in env.agents])
 
     def on_episode_step(self, worker, base_env, policies, episode, **kwargs):
         # there is a bug where on_episode_step gets called where it shouldn't
@@ -36,21 +37,19 @@ class TradeCallback(DefaultCallbacks):
 
 
     def on_episode_end(self, worker, base_env, policies, episode, **kwargs,):
-        print("EP END")
-        print("EP END")
-        print("EP END")
-        print("EP END")
         env = base_env.get_unwrapped()[0]
         #if not all(env.dones.values()):
         #    return
         #episode.custom_metrics["grid_size"] = env.grid_size
         for food, count in enumerate(env.mc.num_exchanges):
             episode.custom_metrics[f"exchange_{food}"] = count
-        for symbol, count in enumerate(self.comm_history):
-            episode.custom_metrics[f"comm_{symbol}"] = count
+        #for symbol, count in enumerate(self.comm_history):
+        #    episode.custom_metrics[f"comm_{symbol}"] = count
+        total_picked = 0
+        total_placed = 0
         for agent in env.agents:
-            episode.custom_metrics[f"{agent}_punishes"] = self.punish_counts[agent]
-            episode.custom_metrics[f"{agent}_lifetime"] = env.mc.lifetimes[agent]
+            #episode.custom_metrics[f"{agent}_punishes"] = self.punish_counts[agent]
+            #episode.custom_metrics[f"{agent}_lifetime"] = env.mc.lifetimes[agent]
             episode.custom_metrics[f"{agent}_food_imbalance"] = \
                 max(env.agent_food_counts[agent]) / max(1, min(env.agent_food_counts[agent]))
             total_agent_exchange = {"give": 0, "take": 0}
@@ -76,19 +75,16 @@ class TradeCallback(DefaultCallbacks):
             for food in range(env.food_types):
                 episode.custom_metrics[f"{agent}_PICK_{food}"] = env.mc.picked_counts[agent][food]
                 episode.custom_metrics[f"{agent}_PLACE_{food}"] = env.mc.placed_counts[agent][food]
-
+                total_picked += env.mc.picked_counts[agent][food]  
+                total_placed += env.mc.placed_counts[agent][food] 
+        episode.custom_metrics["total_picked"] = total_picked
+        episode.custom_metrics["total_placed"] = total_placed
         episode.custom_metrics["avg_avg_dist"] = sum(self.agent_dists) / len(self.agent_dists)
         total_number_of_actions = sum(self.action_counts.values())
         if total_number_of_actions > 0:
             for act, count in self.action_counts.items():
+                assert count / total_number_of_actions >= 0
                 episode.custom_metrics[f"percent_{act}"] = count / total_number_of_actions
         episode.custom_metrics["rew_base_health"] = env.mc.rew_base_health
-        episode.custom_metrics["rew_shared_health"] = env.mc.rew_shared_health
-        #episode.custom_metrics["rew_nn"] = env.mc.rew_nn
-        #episode.custom_metrics["rew_twonn"] = env.mc.rew_twonn
-        #episode.custom_metrics["rew_other_survival_bonus"] = env.mc.rew_other_survival_bonus
-        #episode.custom_metrics["rew_pun"] = env.mc.rew_pun
-        #episode.custom_metrics["rew_mov"] = env.mc.rew_mov
         episode.custom_metrics["rew_light"] = env.mc.rew_light
         episode.custom_metrics["rew_act"] = env.mc.rew_acts
-        episode.custom_metrics["rew_ineq"] = env.mc.rew_ineq

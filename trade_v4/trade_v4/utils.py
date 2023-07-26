@@ -1,4 +1,7 @@
 import math
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
+from random import shuffle
 directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
 def add_tup(tup1: tuple, tup2: tuple):
@@ -19,9 +22,19 @@ def punish_region(x, y, gx, gy):
     y_region = slice(max(0, y-window), min(gy, y+window))
     return x_region, y_region
 
+def matchup_shuffler(matchups_list: List[Tuple]):
+    matchups = matchups_list.copy()
+    while True:
+        shuffle(matchups)
+        for matchup in matchups:
+            yield matchup
 
-POLICY_MAPPING_FN = {
-    1: lambda aid, **kwargs: "pol1",
-    2: lambda aid, **kwargs: "pol1" if aid in {"player_0", "player_1"} else "pol2",
-    4: lambda aid, **kwargs: aid
-}
+
+#POLICY_MAPPING_FN = {
+#    1: lambda aid, **kwargs: "pol1",
+#    2: lambda aid, **kwargs: "pol1" if aid in {"player_0", "player_2"} else "pol2",
+#    4: lambda aid, **kwargs: aid,
+#    8: lambda aid, **kwargs: aid,
+#}
+def POLICY_MAPPING_FN(aid: str, *args ,**kwargs) -> str:
+    return aid

@@ -4,7 +4,7 @@
 # THIS FILE IS A TEMPLATE AND IT SHOULD NOT BE DEPLOYED TO PRODUCTION!
 
 #SBATCH --mail-type=END
-#SBATCH --mail-user=garbus@brandeis.edu
+#SBATCH --mail-user=9147037394@vtext.com
 #SBATCH --job-name=${JOB_NAME}
 #SBATCH --output=/work/garbus/ray_logs/${RUN_NAME}.log
 #SBATCH --account=guest
@@ -12,13 +12,11 @@
 #SBATCH --time=24:00:00
 #SBATCH --requeue
 #SBATCH --partition=guest-gpu
-#SBATCH --gres=gpu:TitanX:8
-#SBATCH --nodes=1
-#SBATCH --exclusive
+#SBATCH --gres=gpu:TitanX:1
+##SBATCH --gres=gpu:V100:1
 #SBATCH --exclude=gpu-6-9
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem-per-cpu=1GB
+#SBATCH --cpus-per-task=2
+#SBATCH --mem-per-cpu=4GB
 
 # Load modules or your own conda environment here
 # module load pytorch/v1.4.0-gpu
@@ -32,41 +30,41 @@ conda activate trade
 redis_password="longredispassword"
 export redis_password
 
-nodes=$(scontrol show hostnames "$SLURM_JOB_NODELIST") # Getting the node names
-nodes_array=($nodes)
-
-node_1=${nodes_array[0]}
-ip=$(srun --nodes=1 --ntasks=1 -w "$node_1" hostname --ip-address) # making redis-address
-
-# if we detect a space character in the head node IP, we'll
-# convert it to an ipv4 address. This step is optional.
-if [[ "$ip" == *" "* ]]; then
-      IFS=' ' read -ra ADDR <<< "$ip"
-      if [[ ${#ADDR[0]} -gt 16 ]]; then
-          ip=${ADDR[1]}
-      else
-          ip=${ADDR[0]}
-      fi
-      echo "IPV6 address detected. We split the IPV4 address as $ip"
-fi
-
-port=6379
-ip_head=$ip:$port
-export ip_head
-echo "IP Head: $ip_head"
-
-echo "STARTING HEAD at $node_1"
-srun --nodes=1 --ntasks=1 --gres=gpu:TitanX:8 -w "$node_1" \
-  ray start --head --node-ip-address="$ip" --port=$port --redis-password="$redis_password" --block &
-sleep 30
-
-worker_num=$((SLURM_JOB_NUM_NODES - 1)) #number of nodes other than the head node
-for ((i = 1; i <= worker_num; i++)); do
-    node_i=${nodes_array[$i]}
-    echo "STARTING WORKER $i at $node_i"
-    srun --nodes=1 --ntasks=1 --gres=gpu:TitanX:8 -w "$node_i" ray start --address "$ip_head" --redis-password="$redis_password" --block &
-done
-sleep 30
+#nodes=$(scontrol show hostnames "$SLURM_JOB_NODELIST") # Getting the node names
+#nodes_array=($nodes)
+#
+#node_1=${nodes_array[0]}
+#ip=$(srun --nodes=1 --ntasks=1 -w "$node_1" hostname --ip-address) # making redis-address
+#
+## if we detect a space character in the head node IP, we'll
+## convert it to an ipv4 address. This step is optional.
+#if [[ "$ip" == *" "* ]]; then
+#      IFS=' ' read -ra ADDR <<< "$ip"
+#      if [[ ${#ADDR[0]} -gt 16 ]]; then
+#          ip=${ADDR[1]}
+#      else
+#          ip=${ADDR[0]}
+#      fi
+#      echo "IPV6 address detected. We split the IPV4 address as $ip"
+#fi
+#
+#port=6379
+#ip_head=$ip:$port
+#export ip_head
+#echo "IP Head: $ip_head"
+#
+#echo "STARTING HEAD at $node_1"
+#srun --nodes=1 --ntasks=1 --gres=gpu:TitanX:8 -w "$node_1" \
+#  ray start --head --node-ip-address="$ip" --port=$port --redis-password="$redis_password" --block &
+#sleep 30
+#
+#worker_num=$((SLURM_JOB_NUM_NODES - 1)) #number of nodes other than the head node
+#for ((i = 1; i <= worker_num; i++)); do
+#    node_i=${nodes_array[$i]}
+#    echo "STARTING WORKER $i at $node_i"
+#    srun --nodes=1 --ntasks=1 --gres=gpu:TitanX:8 -w "$node_i" ray start --address "$ip_head" --redis-password="$redis_password" --block &
+#done
+#sleep 30
 
 # ===== Call your code below =====
-${COMMAND_PLACEHOLDER} --ip $ip_head
+${COMMAND_PLACEHOLDER}

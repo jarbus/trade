@@ -1,0 +1,7 @@
+#!/bin/bash
+arg_file="$1"
+if [[ -f "$arg_file" ]]; then
+    name=$(basename "$arg_file" .arg)
+    args=$(cat "$arg_file")
+    python test_with_args.py --name $name $args
+fi
